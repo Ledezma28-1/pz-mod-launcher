@@ -58,7 +58,7 @@ El instalador no está firmado con un certificado de Windows, así que SmartScre
 
 ## Requisitos
 
-- Windows 11 (no está probada en otras versiones). Puede haber versión para Linux y macOS si alguien ayuda a adaptarla: lo que depende de Windows (Steam, ZombieBuddy, el arranque del juego y los enlaces de carpetas) está en unos pocos módulos de `core/src`, y se aceptan pull requests.
+- Windows 11 (no está probada en otras versiones). Puede haber versión para Linux y macOS si alguien ayuda a adaptarla: lo que depende de Windows (Steam, ZombieBuddy, el arranque del juego y los enlaces de carpetas y la ventana de WebView2) está en unos pocos módulos de `core/src` y en `src-tauri/src/lib.rs`, y se aceptan pull requests.
 - Project Zomboid Build 42 instalado desde Steam.
 
 ## Compilar
