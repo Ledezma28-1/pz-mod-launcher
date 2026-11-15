@@ -18,6 +18,8 @@ Each installer is built by [GitHub Actions](.github/workflows/release.yml) from 
 gh attestation verify PZ.Mod.Manager_0.1.0_x64-setup.exe --repo Ledezma28-1/pz-mod-launcher
 ```
 
+[VirusTotal report for v0.1.0](https://www.virustotal.com/gui/file/ce47540fafe8558b1a718a4bd1cec76fddf5c78f9b91287d96c80678ddf47890): 2 of 69 engines flag it (Arctic Wolf and SecureAge, both machine-learning engines). These are false positives that unsigned installers often get; Microsoft Defender, Kaspersky, ESET, BitDefender and the rest find nothing.
+
 ## Screenshots
 
 | | |

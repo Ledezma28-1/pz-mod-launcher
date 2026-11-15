@@ -18,6 +18,8 @@ Cada instalador lo compila [GitHub Actions](.github/workflows/release.yml) a par
 gh attestation verify PZ.Mod.Manager_0.1.0_x64-setup.exe --repo Ledezma28-1/pz-mod-launcher
 ```
 
+[Informe de VirusTotal de la v0.1.0](https://www.virustotal.com/gui/file/ce47540fafe8558b1a718a4bd1cec76fddf5c78f9b91287d96c80678ddf47890): 2 de 69 motores lo marcan (Arctic Wolf y SecureAge, los dos de aprendizaje automático). Son falsos positivos habituales en instaladores sin firmar; Microsoft Defender, Kaspersky, ESET, BitDefender y los demás no encuentran nada.
+
 ## Capturas
 
 | | |
