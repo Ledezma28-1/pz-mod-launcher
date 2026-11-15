@@ -14,8 +14,8 @@ The interface is available in English and Spanish.
 |---|---|
 | ![Home: profiles and this week's featured Workshop mods](screenshots/home.png) | ![Conflicts grouped by topic, with a fix for each](screenshots/conflicts.png) |
 | Home: your profiles and this week's featured mods | Conflicts, grouped by topic |
-| ![Game console errors grouped by mod](screenshots/console.png) | |
-| Game console errors, grouped by mod | |
+| ![Game console errors grouped by mod](screenshots/console.png) | ![Library of installed mods, ready to add to a profile](screenshots/library.png) |
+| Game console errors, grouped by mod | Library: every installed mod, ready to add to a profile |
 
 The screenshots use sample data.
 

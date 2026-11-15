@@ -14,8 +14,8 @@ La interfaz está en español y en inglés.
 |---|---|
 | ![Inicio: perfiles y mods destacados de la semana](screenshots/home.png) | ![Conflictos agrupados por tema, con un arreglo para cada uno](screenshots/conflicts.png) |
 | Inicio: tus perfiles y los mods destacados de la semana | Conflictos, agrupados por tema |
-| ![Errores de la consola del juego agrupados por mod](screenshots/console.png) | |
-| Errores de la consola del juego, agrupados por mod | |
+| ![Errores de la consola del juego agrupados por mod](screenshots/console.png) | ![Biblioteca de mods instalados, lista para añadirlos a un perfil](screenshots/library.png) |
+| Errores de la consola del juego, agrupados por mod | Biblioteca: todos los mods instalados, listos para añadir a un perfil |
 
 Las capturas usan datos de ejemplo y están en inglés.
 
