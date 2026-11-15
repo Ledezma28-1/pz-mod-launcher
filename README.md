@@ -58,7 +58,7 @@ The installer is not signed with a Windows certificate, so SmartScreen will warn
 
 ## Requirements
 
-- Windows 11 (not tested on other versions).
+- Windows 11 (not tested on other versions). A Linux version is planned and will be released once it is developed.
 - Project Zomboid Build 42 installed through Steam.
 
 ## Building

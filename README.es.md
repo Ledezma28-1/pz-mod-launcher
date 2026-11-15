@@ -58,7 +58,7 @@ El instalador no está firmado con un certificado de Windows, así que SmartScre
 
 ## Requisitos
 
-- Windows 11 (no está probada en otras versiones).
+- Windows 11 (no está probada en otras versiones). Habrá versión para Linux cuando esté desarrollada.
 - Project Zomboid Build 42 instalado desde Steam.
 
 ## Compilar
