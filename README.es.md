@@ -6,6 +6,19 @@ Gestor de mods para Project Zomboid (Build 42) en Windows. Cada perfil tiene su 
 
 La interfaz está en español y en inglés.
 
+![Orden de carga de un perfil con sus bloqueos](screenshots/profile.png)
+
+## Capturas
+
+| | |
+|---|---|
+| ![Inicio: perfiles y mods destacados de la semana](screenshots/home.png) | ![Conflictos agrupados por tema, con un arreglo para cada uno](screenshots/conflicts.png) |
+| Inicio: tus perfiles y los mods destacados de la semana | Conflictos, agrupados por tema |
+| ![Errores de la consola del juego agrupados por mod](screenshots/console.png) | |
+| Errores de la consola del juego, agrupados por mod | |
+
+Las capturas usan datos de ejemplo y están en inglés.
+
 ## Qué hace
 
 - Perfiles aislados: cada uno usa su carpeta con `-cachedir`, así que las partidas, las opciones y la lista de mods de un perfil no se mezclan con las de otro ni con las del juego.

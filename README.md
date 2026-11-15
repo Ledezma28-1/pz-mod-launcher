@@ -6,6 +6,19 @@ A mod manager for Project Zomboid (Build 42) on Windows. Each profile has its ow
 
 The interface is available in English and Spanish.
 
+![A profile's load order with its blocking issues](screenshots/profile.png)
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Home: profiles and this week's featured Workshop mods](screenshots/home.png) | ![Conflicts grouped by topic, with a fix for each](screenshots/conflicts.png) |
+| Home: your profiles and this week's featured mods | Conflicts, grouped by topic |
+| ![Game console errors grouped by mod](screenshots/console.png) | |
+| Game console errors, grouped by mod | |
+
+The screenshots use sample data.
+
 ## Features
 
 - Isolated profiles: each one uses its own folder through `-cachedir`, so a profile's saves, options and mod list never mix with another profile's or with the game's own.
