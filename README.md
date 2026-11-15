@@ -16,6 +16,8 @@ The interface is available in English and Spanish.
 | Home: your profiles and this week's featured mods | Conflicts, grouped by topic |
 | ![Game console errors grouped by mod](screenshots/console.png) | ![Library of installed mods, ready to add to a profile](screenshots/library.png) |
 | Game console errors, grouped by mod | Library: every installed mod, ready to add to a profile |
+| ![Server and sandbox options editor](screenshots/sandbox.png) | ![Server .ini lines and map order](screenshots/export.png) |
+| Server and sandbox options, from the game and your mods | `Mods=`, `WorkshopItems=` and `Map=` lines for a server `.ini` |
 
 The screenshots use sample data.
 

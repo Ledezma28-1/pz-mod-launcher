@@ -16,6 +16,8 @@ La interfaz está en español y en inglés.
 | Inicio: tus perfiles y los mods destacados de la semana | Conflictos, agrupados por tema |
 | ![Errores de la consola del juego agrupados por mod](screenshots/console.png) | ![Biblioteca de mods instalados, lista para añadirlos a un perfil](screenshots/library.png) |
 | Errores de la consola del juego, agrupados por mod | Biblioteca: todos los mods instalados, listos para añadir a un perfil |
+| ![Editor de opciones de servidor y sandbox](screenshots/sandbox.png) | ![Líneas del .ini del servidor y orden de mapas](screenshots/export.png) |
+| Opciones de servidor y sandbox, del juego y de tus mods | Líneas `Mods=`, `WorkshopItems=` y `Map=` para el `.ini` de un servidor |
 
 Las capturas usan datos de ejemplo y están en inglés.
 
