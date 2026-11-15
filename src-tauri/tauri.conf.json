@@ -1,0 +1,52 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "PZ Mod Manager",
+  "version": "0.1.0",
+  "identifier": "dev.pzmodmanager.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "PZ Mod Manager",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1100,
+        "minHeight": 680
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: https:; connect-src 'self' https://images.steamusercontent.com; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "publisher": "PZ Mod Manager",
+    "shortDescription": "Gestor de mods de Project Zomboid con soporte de ZombieBuddy",
+    "longDescription": "Perfiles aislados, orden de carga, conflictos, Workshop y ZombieBuddy para Project Zomboid Build 42. No modifica el juego sin copia de seguridad.",
+    "category": "Game",
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": [
+          "Spanish",
+          "English"
+        ],
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}

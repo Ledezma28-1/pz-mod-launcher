@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permisos de la ventana principal: los básicos y el zoom de la vista (tamaño de la interfaz en Ajustes); abrir Steam o carpetas se hace desde Rust",
+  "windows": ["main"],
+  "permissions": ["core:default", "core:webview:allow-set-webview-zoom"]
+}
