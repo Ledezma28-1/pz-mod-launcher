@@ -8,6 +8,16 @@ The interface is available in English and Spanish.
 
 ![A profile's load order with its blocking issues](screenshots/profile.png)
 
+## Download
+
+Get the installer from [Releases](https://github.com/Ledezma28-1/pz-mod-launcher/releases/latest).
+
+Each installer is built by [GitHub Actions](.github/workflows/release.yml) from the tagged source in this repository, not on someone's PC. The release notes list its SHA-256, and GitHub signs a record of where it was built, which you can check with the [GitHub CLI](https://cli.github.com):
+
+```bash
+gh attestation verify "PZ Mod Manager_0.1.0_x64-setup.exe" --repo Ledezma28-1/pz-mod-launcher
+```
+
 ## Screenshots
 
 | | |

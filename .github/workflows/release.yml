@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to build (for example v0.1.0)
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: rustup toolchain install stable --profile minimal && rustup default stable
+
+      - run: npm ci
+
+      - run: npx tauri build
+
+      - name: Collect installer
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
+          $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower()
+          "EXE=$($exe.FullName)" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          @"
+          Built by GitHub Actions from the tagged commit ($env:GITHUB_SHA).
+
+          SHA-256 of ``$($exe.Name)``:
+
+          ``````
+          $hash
+          ``````
+
+          Check that this file was built here from this repository:
+
+          ``````
+          gh attestation verify "$($exe.Name)" --repo $env:GITHUB_REPOSITORY
+          ``````
+          "@ | Out-File notes.md -Encoding utf8
+
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ env.EXE }}
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view $env:TAG *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:TAG $env:EXE --clobber
+            gh release edit $env:TAG --notes-file notes.md
+          } else {
+            gh release create $env:TAG $env:EXE --title $env:TAG --notes-file notes.md
+          }
