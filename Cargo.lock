@@ -2712,7 +2712,7 @@ dependencies = [
 
 [[package]]
 name = "pz-mod-manager"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "base64 0.23.1",
  "pzmm-core",
@@ -2728,7 +2728,7 @@ dependencies = [
 
 [[package]]
 name = "pzmm-core"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "serde",
  "serde_json",
