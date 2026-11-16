@@ -6,8 +6,6 @@ Gestor de mods para Project Zomboid (Build 42) en Windows. Cada perfil tiene su 
 
 La interfaz está en español y en inglés.
 
-![Orden de carga de un perfil con sus bloqueos](screenshots/profile.png)
-
 ## Descarga
 
 Descarga el instalador desde [Releases](https://github.com/Ledezma28-1/pz-mod-launcher/releases/latest).

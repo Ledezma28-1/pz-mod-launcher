@@ -6,8 +6,6 @@ A mod manager for Project Zomboid (Build 42) on Windows. Each profile has its ow
 
 The interface is available in English and Spanish.
 
-![A profile's load order with its blocking issues](screenshots/profile.png)
-
 ## Download
 
 Get the installer from [Releases](https://github.com/Ledezma28-1/pz-mod-launcher/releases/latest).
