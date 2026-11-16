@@ -1,5 +1,17 @@
 
+const REPO = 'https://github.com/Ledezma28-1/pz-mod-launcher';
 export const RELEASES_API = 'https://api.github.com/repos/Ledezma28-1/pz-mod-launcher/releases/latest';
+
+export const releaseUrl = (version: string) => `${REPO}/releases/tag/v${version.replace(/^v/i, '')}`;
+
+export function issueUrl(app: string, game: string | null, zb: string | null): string {
+  const q = new URLSearchParams({ template: 'bug.yml', app });
+  if (game) q.set('game', game);
+  if (zb) q.set('zb', zb);
+  return `${REPO}/issues/new?${q}`;
+}
+
+export const justUpdated = (seen: string | null, current: string) => !!seen && isNewer(current, seen);
 
 export type Release = { version: string; url: string };
 

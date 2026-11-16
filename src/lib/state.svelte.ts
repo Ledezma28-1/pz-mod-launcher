@@ -5,7 +5,7 @@ import { steam } from './steam.svelte';
 import { channelOf, shouldInstall, updateToNotify, type Channel } from './zb-flow';
 import { PALETTES, type Palette } from './palettes';
 import { DISCLAIMER_VERSION, shouldShow } from './disclaimer';
-import { latestRelease, type Release } from './update';
+import { justUpdated, latestRelease, releaseUrl, type Release } from './update';
 import type { SteamProfile, AppSettingsData, BisectAnswer, BisectView, Fix, Environment, GameListChange, Issue, SessionState, OrderProposal, ProfileSummary, ProfileView, ViewProgress, WorkshopState } from './types';
 
 export const ZB_IDS: Record<Channel, number> = { estable: 3619862853, beta: 3812624292 };
@@ -77,6 +77,11 @@ class State {
     applyScale(this.scale);
     if (!inTauri && new URLSearchParams(location.search).get('update')) this.update = { version: '0.2.0', url: 'https://github.com/Ledezma28-1/pz-mod-launcher/releases' };
     if (inTauri && this.updateCheck) setTimeout(() => void this.checkUpdate(false), 4000);
+    const seen = !inTauri && new URLSearchParams(location.search).get('updated') ? '0.0.1' : readText('seen-version');
+    if (justUpdated(seen, __VERSION__)) {
+      this.notify(t('update.updated', { v: __VERSION__ }), 'ok', undefined, { text: t('update.whats_new'), f: () => api.openUrl(releaseUrl(__VERSION__)) });
+    }
+    writeText('seen-version', __VERSION__);
     api.workshopIdle(this.steamIdle).catch(() => {});
     await onSession((p) => {
       this.session = p;

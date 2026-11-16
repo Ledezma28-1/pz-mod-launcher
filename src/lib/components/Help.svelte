@@ -1,6 +1,8 @@
 <script lang="ts">
   import ArrowRight from '@lucide/svelte/icons/arrow-right';
   import FolderOpen from '@lucide/svelte/icons/folder-open';
+  import Bug from '@lucide/svelte/icons/bug';
+  import { issueUrl } from '../update';
   import { api, message } from '../api';
   import { app, type Screen, type Tab } from '../state.svelte';
   import { t } from '../i18n.svelte';
@@ -21,7 +23,7 @@
     { id: 'share', paragraphs: 1, go: { screen: 'profile', tab: 'export', label: 'profile.tab.export' } },
     { id: 'backups', paragraphs: 1, go: { screen: 'install', label: 'nav.install' } },
     { id: 'settings', paragraphs: 2, go: { screen: 'settings', label: 'nav.settings' } },
-    { id: 'failures', paragraphs: 2 },
+    { id: 'failures', paragraphs: 3 },
   ];
 
   const title = (id: string) => t(`help.${id}.t` as Key);
@@ -47,6 +49,11 @@
       await app.chooseProfile(app.profileId);
       app.tab = g.tab;
     } else app.screen = g.screen;
+  }
+
+  function report() {
+    const env = app.environment;
+    api.openUrl(issueUrl(__VERSION__, env?.game.version ?? null, env?.zb.in_game ?? null)).catch((e) => app.notify(message(e), 'error'));
   }
 
   async function openLogs() {
@@ -91,7 +98,10 @@
             <button class="btn" onclick={() => go(g)}>{t('help.go', { s: t(g.label) })}<ArrowRight size={14} strokeWidth={1.75} /></button>
           {/if}
           {#if tm.id === 'failures'}
-            <button class="btn" onclick={openLogs}><FolderOpen size={14} strokeWidth={1.75} />{t('settings.logs_open')}</button>
+            <div class="buttons">
+              <button class="btn" onclick={openLogs}><FolderOpen size={14} strokeWidth={1.75} />{t('settings.logs_open')}</button>
+              <button class="btn" onclick={report}><Bug size={14} strokeWidth={1.75} />{t('help.report')}</button>
+            </div>
           {/if}
         </article>
       {:else}
@@ -158,6 +168,11 @@
   }
   article {
     scroll-margin-top: 12px;
+  }
+  .buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
   }
   h2 {
     margin: 0 0 6px;

@@ -1,0 +1,49 @@
+name: Bug report
+description: Something in PZ Mod Manager doesn't work
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what the app did instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a profile
+        2. Click ...
+  - type: input
+    id: app
+    attributes:
+      label: App version
+      description: Settings → Version
+      placeholder: 0.2.0
+    validations:
+      required: true
+  - type: input
+    id: game
+    attributes:
+      label: Project Zomboid version
+      placeholder: 42.22.2
+  - type: input
+    id: zb
+    attributes:
+      label: ZombieBuddy version
+      description: Leave empty if it isn't installed.
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: |
+        Help → If something goes wrong → Open the logs folder, and drag that day's file here.
+        It contains your folder paths, but no keys or passwords.
+  - type: textarea
+    id: crash
+    attributes:
+      label: Crash report
+      description: If the game failed, paste what "Copy report" gives you in the profile's Console tab.
+      render: text
