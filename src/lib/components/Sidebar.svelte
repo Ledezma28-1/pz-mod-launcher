@@ -8,6 +8,7 @@
   import Settings from '@lucide/svelte/icons/settings';
   import CircleHelp from '@lucide/svelte/icons/circle-help';
   import Coffee from '@lucide/svelte/icons/coffee';
+  import Download from '@lucide/svelte/icons/download';
   import ExternalLink from '@lucide/svelte/icons/external-link';
   import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
   import { app, type Screen } from '../state.svelte';
@@ -141,6 +142,14 @@
       <span class="name">{t('nav.coffee')}</span>
       <ExternalLink class="out" size={13} strokeWidth={1.75} />
     </button>
+    {#if app.update}
+      {@const u = app.update}
+      <button class="section update" onclick={() => api.openUrl(u.url).catch((e) => app.notify(message(e), 'error'))} title={t('update.available_help')}>
+        <Download size={16} strokeWidth={1.75} />
+        <span class="name">{t('update.available', { v: u.version })}</span>
+        <ExternalLink class="out" size={13} strokeWidth={1.75} />
+      </button>
+    {/if}
     {#if app.environment}
       <div class="version mono" title={app.environment.game.folder}>
         PZ {app.environment.game.version}{#if app.environment.zb.in_game}&nbsp;· ZB {app.environment.zb.in_game}{/if}
@@ -295,6 +304,10 @@
   }
   .section :global(.out) {
     color: var(--shell-ink-2);
+  }
+  .section.update {
+    color: var(--shell-accent);
+    font-weight: 600;
   }
   .profile.current,
   .section.current {

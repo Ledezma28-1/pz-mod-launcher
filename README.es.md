@@ -59,7 +59,7 @@ La app necesita hacer cosas que pueden llamar la atención en un antivirus o en 
 - Steam: para el Workshop carga el `steam_api64.dll` que trae el juego y se identifica como Project Zomboid (App ID 108600). Mientras tienes abierta la pantalla del Workshop, Steam te muestra jugando a Project Zomboid. La sesión se cierra antes de lanzar el juego.
 - Datos de Steam: lee, sin modificarlos, `loginusers.vdf`, `localconfig.vdf` y la caché de avatares para mostrar tu nombre, tu foto y tus horas de juego. También lee el registro de Windows para encontrar dónde está instalado Steam.
 - Archivos propios: los perfiles van en `%USERPROFILE%\PZModManager\perfiles` y los ajustes, cachés y registros en `%APPDATA%\PZModManager`.
-- Red: solo habla con Steam (a través del cliente de Steam abierto) y descarga las imágenes de las fichas del Workshop desde donde estén alojadas. No tiene telemetría ni servidores propios.
+- Red: habla con Steam (a través del cliente de Steam abierto), descarga las imágenes de las fichas del Workshop desde donde estén alojadas y, al abrirse, pregunta a GitHub cuál es la última versión de este repositorio para avisarte si hay una nueva (se puede desactivar en Ajustes). Nunca descarga ni instala nada por su cuenta. No tiene telemetría ni servidores propios.
 
 El instalador no está firmado con un certificado de Windows, así que SmartScreen avisará de que el editor es desconocido.
 

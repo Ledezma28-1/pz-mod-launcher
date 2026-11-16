@@ -410,7 +410,16 @@
     <h2>{t('settings.section.about')}</h2>
     <div class="group">
       <span class="tag">{t('settings.version')}</span>
-      <span class="value mono">{__VERSION__}</span>
+      <div class="row-disclaimer">
+        <span class="value mono">{__VERSION__}</span>
+        {#if app.update}
+          {@const u = app.update}
+          <button class="btn" onclick={() => api.openUrl(u.url).catch((e) => app.notify(message(e), 'error'))}>{t('update.download', { v: u.version })}</button>
+        {:else}
+          <button class="btn subtle" onclick={() => app.checkUpdate(true)}>{t('update.check_now')}</button>
+        {/if}
+        <label class="check-start"><input type="checkbox" checked={app.updateCheck} onchange={(e) => app.setUpdateCheck(e.currentTarget.checked)} />{t('update.check')}</label>
+      </div>
     </div>
     <div class="group">
       <span class="tag">{t('settings.disclaimer')}</span>

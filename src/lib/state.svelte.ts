@@ -5,6 +5,7 @@ import { steam } from './steam.svelte';
 import { channelOf, shouldInstall, updateToNotify, type Channel } from './zb-flow';
 import { PALETTES, type Palette } from './palettes';
 import { DISCLAIMER_VERSION, shouldShow } from './disclaimer';
+import { latestRelease, type Release } from './update';
 import type { SteamProfile, AppSettingsData, BisectAnswer, BisectView, Fix, Environment, GameListChange, Issue, SessionState, OrderProposal, ProfileSummary, ProfileView, ViewProgress, WorkshopState } from './types';
 
 export const ZB_IDS: Record<Channel, number> = { estable: 3619862853, beta: 3812624292 };
@@ -63,6 +64,8 @@ class State {
   steamProfile = $state<SteamProfile | null>(null);
   disclaimerAtStart = $state(shouldShow(readText('disclaimer-hidden')));
   disclaimerOpen = $state(inTauri && shouldShow(readText('disclaimer-hidden')));
+  update = $state<Release | null>(null);
+  updateCheck = $state(readText('update-check') !== 'off');
   private zbTimer: ReturnType<typeof setInterval> | null = null;
   private reread: ReturnType<typeof setTimeout> | null = null;
 
@@ -72,6 +75,8 @@ class State {
     applyTheme(this.theme);
     applyPalette(this.palette);
     applyScale(this.scale);
+    if (!inTauri && new URLSearchParams(location.search).get('update')) this.update = { version: '0.2.0', url: 'https://github.com/Ledezma28-1/pz-mod-launcher/releases' };
+    if (inTauri && this.updateCheck) setTimeout(() => void this.checkUpdate(false), 4000);
     api.workshopIdle(this.steamIdle).catch(() => {});
     await onSession((p) => {
       this.session = p;
@@ -230,6 +235,20 @@ class State {
   closeDisclaimer(hide: boolean) {
     this.disclaimerOpen = false;
     if (hide) this.setDisclaimerAtStart(false);
+  }
+
+  async checkUpdate(manual: boolean) {
+    try {
+      this.update = await latestRelease(__VERSION__);
+      if (manual && !this.update) this.notify(t('update.latest'));
+    } catch (e) {
+      if (manual) this.notify(t('update.error', { e: message(e) }), 'error');
+    }
+  }
+
+  setUpdateCheck(on: boolean) {
+    this.updateCheck = on;
+    writeText('update-check', on ? 'on' : 'off');
   }
 
   setDisclaimerAtStart(show: boolean) {
