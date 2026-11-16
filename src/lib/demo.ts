@@ -62,7 +62,7 @@ let active: Record<string, boolean> = Object.fromEntries(seeds.map(([id]) => [id
 let order = seeds.map(([id]) => id);
 if (carsExtra) order = [...order.filter((id) => id !== 'damnlib'), 'damnlib'];
 
-const findings: Finding[] = [
+const allFindings: Finding[] = [
   {
     severity: 'Blocks',
     mods: ['ebfchainsaw'],
@@ -228,7 +228,7 @@ const findings: Finding[] = [
   },
 ];
 if (new URLSearchParams(location.search).get('incompat')) {
-  findings.push(
+  allFindings.push(
     {
       severity: 'Blocks',
       mods: ['firearmmod', 'firearmmodbeta', 'firearmmodvanilla'],
@@ -267,7 +267,7 @@ if (new URLSearchParams(location.search).get('noisy')) {
     kind,
     fixes: [...fixes, { action: 'Disable', data: mod }],
   });
-  findings.push(
+  allFindings.push(
     block('RollingHillsPhysics', { kind: 'GameVersion', min: '42.21', max: '42.21', game: '42.22' }),
     block('RollingHillsPhysics', { kind: 'MissingDependency', requires: 'ViewpointRollingHills', inactive_installed: false }, [{ action: 'OpenWorkshop', data: 3600000001 }]),
     block('twistonfirestatsmp', { kind: 'GameVersion', min: '42.19', max: '42.19', game: '42.22' }),
@@ -304,9 +304,23 @@ const requires: Record<string, string[]> = {
 };
 for (let i = 0; i < carsExtra; i++) requires[`coche${i}`] = ['damnlib'];
 
+const sortMoves = [
+  { id: 'RavenCreekB42', after: 'ZomboidRichPresence', reasons: [], category: 'map', effect: 'category' },
+  { id: 'ExpandedHelicopterEvents', after: 'SPNCC', reasons: [], category: 'code', effect: 'winner' },
+  { id: 'ChainsawB42', after: 'ebfchainsaw', reasons: [{ before: 'ebfchainsaw', after: 'ChainsawB42', rule: 'UserOverride' }], category: 'other', effect: 'rule' },
+] as const;
+function sortedOrder() {
+  const next = order.filter((id) => !sortMoves.some((m) => m.id === id));
+  for (const m of sortMoves) if (order.includes(m.id)) next.splice(next.indexOf(m.after) + 1, 0, m.id);
+  return next;
+}
+
+const seedOf = (id: string) => seeds.find((x) => x[0] === id) ?? outsideOfProfile.find((x) => x[0] === id)!;
+
 function view(): ProfileView {
+  const findings = allFindings.filter((h) => h.mods.every((m) => active[m] !== false));
   const rows: Row[] = order.map((id, i) => {
-    const s = seeds.find((x) => x[0] === id)!;
+    const s = seedOf(id);
     const worst = findings
       .filter((h) => h.mods.includes(id))
       .map((h) => h.severity)
@@ -358,7 +372,7 @@ const profiles: ProfileSummary[] = [
 
 function detail(key: string): ModDetails {
   const id = key.split('/')[1];
-  const s = seeds.find((x) => x[0] === id)!;
+  const s = seedOf(id);
   const java = s[2] === 'java';
   return {
     key,
@@ -502,32 +516,26 @@ export async function demo<T>(cmd: string, args: Record<string, unknown>): Promi
       }
       return r(n);
     }
+    case 'profile_add':
+      for (const key of args.keys as string[]) {
+        const id = key.split('/')[1];
+        if (!order.includes(id)) order.push(id);
+        active = { ...active, [id]: args.enabled as boolean };
+      }
+      return r(undefined);
     case 'profile_move': {
       const [m] = order.splice(args.from as number, 1);
       order.splice(args.to as number, 0, m);
       return r(undefined);
     }
-    case 'profile_sort':
-      return r({
-        order,
-        moves: [
-          {
-            id: 'TrueMusicJukebox',
-            from: 3,
-            to: 9,
-            reasons: [{ before: '63beetle', after: 'TrueMusicJukebox', rule: 'UserOverride' }],
-            category: 'other',
-            guessed: true,
-            position: null,
-            effect: 'rule',
-          },
-          { id: 'ExpandedHelicopterEvents', from: 8, to: 12, reasons: [], category: 'code', guessed: true, position: null, effect: 'winner' },
-          { id: 'RavenCreekB42', from: 16, to: 4, reasons: [], category: 'map', guessed: true, position: null, effect: 'category' },
-          { id: '63beetle', from: 14, to: 6, reasons: [], category: 'vehicle', guessed: false, position: null, effect: 'category' },
-        ],
-        cycles: [],
-        rules_file: 2,
-      });
+    case 'profile_sort': {
+      const next = sortedOrder();
+      const moves = sortMoves
+        .filter((m) => order.indexOf(m.id) !== next.indexOf(m.id))
+        .map((m) => ({ ...m, from: order.indexOf(m.id), to: next.indexOf(m.id), guessed: true, position: null }));
+      if (args.apply) order = next;
+      return r({ order: next, moves, cycles: [], rules_file: 2 });
+    }
     case 'mod_details':
       return r(detail(args.key as string));
     case 'library':

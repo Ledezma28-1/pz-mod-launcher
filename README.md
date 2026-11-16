@@ -20,6 +20,15 @@ gh attestation verify PZ.Mod.Manager_0.1.0_x64-setup.exe --repo Ledezma28-1/pz-m
 
 [VirusTotal report for v0.1.0](https://www.virustotal.com/gui/file/ce47540fafe8558b1a718a4bd1cec76fddf5c78f9b91287d96c80678ddf47890): 2 of 69 engines flag it (Arctic Wolf and SecureAge, both machine-learning engines). These are false positives that unsigned installers often get; Microsoft Defender, Kaspersky, ESET, BitDefender and the rest find nothing.
 
+## In action
+
+| | |
+|---|---|
+| ![Sorting the load order: each move says why](screenshots/sort.gif) | ![Disabling a mod that won't load clears its conflict](screenshots/conflicts.gif) |
+| Sort the load order. Each move says why. | Fix a conflict from the list. |
+| ![Adding installed mods to a profile from the Library](screenshots/library.gif) | ![Game console errors grouped by mod](screenshots/console.gif) |
+| Add installed mods to a profile. | Read the game's errors, grouped by mod. |
+
 ## Screenshots
 
 | | |
@@ -31,7 +40,7 @@ gh attestation verify PZ.Mod.Manager_0.1.0_x64-setup.exe --repo Ledezma28-1/pz-m
 | ![Server and sandbox options editor](screenshots/sandbox.png) | ![Server .ini lines and map order](screenshots/export.png) |
 | Server and sandbox options, from the game and your mods | `Mods=`, `WorkshopItems=` and `Map=` lines for a server `.ini` |
 
-The screenshots use sample data.
+The GIFs and screenshots use sample data.
 
 ## Features
 

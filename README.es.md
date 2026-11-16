@@ -20,6 +20,15 @@ gh attestation verify PZ.Mod.Manager_0.1.0_x64-setup.exe --repo Ledezma28-1/pz-m
 
 [Informe de VirusTotal de la v0.1.0](https://www.virustotal.com/gui/file/ce47540fafe8558b1a718a4bd1cec76fddf5c78f9b91287d96c80678ddf47890): 2 de 69 motores lo marcan (Arctic Wolf y SecureAge, los dos de aprendizaje automático). Son falsos positivos habituales en instaladores sin firmar; Microsoft Defender, Kaspersky, ESET, BitDefender y los demás no encuentran nada.
 
+## En acción
+
+| | |
+|---|---|
+| ![Ordenar la carga: cada movimiento dice por qué](screenshots/sort.gif) | ![Desactivar un mod que no cargará quita su conflicto](screenshots/conflicts.gif) |
+| Ordenar la carga. Cada movimiento dice por qué. | Arreglar un conflicto desde la lista. |
+| ![Añadir mods instalados a un perfil desde la Biblioteca](screenshots/library.gif) | ![Errores de la consola del juego agrupados por mod](screenshots/console.gif) |
+| Añadir mods instalados a un perfil. | Leer los errores del juego, agrupados por mod. |
+
 ## Capturas
 
 | | |
@@ -31,7 +40,7 @@ gh attestation verify PZ.Mod.Manager_0.1.0_x64-setup.exe --repo Ledezma28-1/pz-m
 | ![Editor de opciones de servidor y sandbox](screenshots/sandbox.png) | ![Líneas del .ini del servidor y orden de mapas](screenshots/export.png) |
 | Opciones de servidor y sandbox, del juego y de tus mods | Líneas `Mods=`, `WorkshopItems=` y `Map=` para el `.ini` de un servidor |
 
-Las capturas usan datos de ejemplo y están en inglés.
+Los GIF y las capturas usan datos de ejemplo y están en inglés.
 
 ## Qué hace
 
