@@ -55,7 +55,7 @@ Los GIF y las capturas usan datos de ejemplo y están en inglés.
 
 La app necesita hacer cosas que pueden llamar la atención en un antivirus o en una revisión de código. Esto es todo lo que hace fuera de su propia carpeta:
 
-- Carpeta del juego: solo la cambia cuando instalas, actualizas o desinstalas ZombieBuddy desde la app. Antes guarda una copia de cada archivo con su SHA-256 para poder restaurarlo. ZombieBuddy funciona añadiendo `-agentlib:zbNative` a `ProjectZomboid64.json` y `ProjectZomboid64.bat`; la app hace ese cambio y lo deshace al desinstalar.
+- Carpeta del juego: solo la cambia cuando instalas, actualizas o desinstalas ZombieBuddy desde la app. Antes guarda una copia de cada archivo con su SHA-256 para poder restaurarlo. Instalar copia ahí `ZombieBuddy.jar` y `zbNative.dll`. La app no edita `ProjectZomboid64.json` ni `ProjectZomboid64.bat`: pasa `-agentlib:zbNative` en la línea de arranque de cada perfil que usa mods Java. Al desinstalar, también quita `-agentlib:zbNative` de esos dos archivos si lo puso el instalador oficial de ZombieBuddy.
 - Steam: para el Workshop carga el `steam_api64.dll` que trae el juego y se identifica como Project Zomboid (App ID 108600). Mientras tienes abierta la pantalla del Workshop, Steam te muestra jugando a Project Zomboid. La sesión se cierra antes de lanzar el juego.
 - Datos de Steam: lee, sin modificarlos, `loginusers.vdf`, `localconfig.vdf` y la caché de avatares para mostrar tu nombre, tu foto y tus horas de juego. También lee el registro de Windows para encontrar dónde está instalado Steam.
 - Archivos propios: los perfiles van en `%USERPROFILE%\PZModManager\perfiles` y los ajustes, cachés y registros en `%APPDATA%\PZModManager`.

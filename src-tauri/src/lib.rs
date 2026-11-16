@@ -2644,13 +2644,15 @@ fn profile_share(id: String) -> R<String> {
             })
             .collect(),
         maps: p.maps.clone(),
-        launch: p.launch.clone(),
-        zombiebuddy: p.zombiebuddy.clone(),
+        launch: profiles::LaunchSettings {
+            xmx: p.launch.xmx.clone(),
+            modfolders: p.launch.modfolders.clone(),
+            ..Default::default()
+        },
+        zombiebuddy: Default::default(),
     };
-    let dir = std::env::var_os("USERPROFILE")
-        .map(|h| PathBuf::from(h).join("Downloads"))
-        .filter(|d| d.is_dir())
-        .ok_or("no se encuentra la carpeta Descargas")?;
+    let dir =
+        pzmm_core::system::downloads_folder().ok_or("no se encuentra la carpeta Descargas")?;
     let base: String = p
         .name
         .chars()

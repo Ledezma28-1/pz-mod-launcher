@@ -1665,6 +1665,8 @@ pub fn analyze(entries: &[ProfileEntry], visible: &[ScannedMod], ctx: &Context) 
             .copied()
             .unwrap_or(usize::MAX)
     });
+    let all_found = loaded.clone();
+    loaded.retain(|(e, _)| position.contains_key(normalize_id(&e.id).as_str()));
     let loaded_ids: Vec<String> = loaded.iter().map(|(e, _)| normalize_id(&e.id)).collect();
     let to_index: Vec<&ScannedMod> = loaded
         .iter()
@@ -2128,7 +2130,7 @@ pub fn analyze(entries: &[ProfileEntry], visible: &[ScannedMod], ctx: &Context) 
         }
     }
 
-    let java: Vec<(&ProfileEntry, &ScannedMod)> = loaded
+    let java: Vec<(&ProfileEntry, &ScannedMod)> = all_found
         .iter()
         .copied()
         .filter(|(_, m)| {

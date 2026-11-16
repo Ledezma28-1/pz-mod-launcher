@@ -75,15 +75,21 @@ impl SandboxOption {
                 _ => *default_value,
             }),
             (Kind::Integer { min, max, .. }, v) => match v.as_f64() {
-                Some(x) => Value::Integer((x as i64).clamp(*min, *max)),
+                Some(x) => Value::Integer((x as i64).max(*min).min(*max)),
                 None => self.default_value(),
             },
             (Kind::List { values, .. }, v) => match v.as_f64() {
-                Some(x) => Value::Integer((x as i64).clamp(1, *values as i64)),
+                Some(x) => Value::Integer((x as i64).min(*values as i64).max(1)),
                 None => self.default_value(),
             },
             (Kind::Decimal { min, max, .. }, v) => match v.as_f64() {
-                Some(x) => Value::Decimal(x.clamp(*min, *max)),
+                Some(x) => Value::Decimal(if x < *min {
+                    *min
+                } else if x > *max {
+                    *max
+                } else {
+                    x
+                }),
                 None => self.default_value(),
             },
             (Kind::Text { .. }, v) => Value::Text(v.as_text()),
@@ -750,7 +756,7 @@ impl Texts {
             ),
             Kind::List { default_value, .. } if !server => self
                 .raw_values(o)
-                .get(*default_value as usize - 1)
+                .get((*default_value as usize).wrapping_sub(1))
                 .cloned()
                 .flatten()
                 .and_then(|v| self.get_br("Sandbox_Default").map(|s| s.replace("%1", &v))),

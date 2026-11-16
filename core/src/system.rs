@@ -164,6 +164,26 @@ impl NoWindow for std::process::Command {
     }
 }
 
+pub fn downloads_folder() -> Option<std::path::PathBuf> {
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::System::Registry::HKEY_CURRENT_USER;
+        let moved = log_text(
+            HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders",
+            "{374DE290-123F-4565-9164-39C4925E467B}",
+        )
+        .map(std::path::PathBuf::from)
+        .filter(|p| p.is_dir());
+        if moved.is_some() {
+            return moved;
+        }
+    }
+    std::env::var_os("USERPROFILE")
+        .map(|h| std::path::PathBuf::from(h).join("Downloads"))
+        .filter(|d| d.is_dir())
+}
+
 pub fn now() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

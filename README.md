@@ -55,7 +55,7 @@ The GIFs and screenshots use sample data.
 
 The app has to do some things that an antivirus or a code review may flag. This is everything it does outside its own folders:
 
-- Game folder: it only changes it when you install, update or uninstall ZombieBuddy from the app. Before that it saves a copy of each file with its SHA-256 so it can be restored. ZombieBuddy works by adding `-agentlib:zbNative` to `ProjectZomboid64.json` and `ProjectZomboid64.bat`; the app makes that change and reverts it when you uninstall.
+- Game folder: it only changes it when you install, update or uninstall ZombieBuddy from the app. Before that it saves a copy of each file with its SHA-256 so it can be restored. Installing copies `ZombieBuddy.jar` and `zbNative.dll` into it. The app does not edit `ProjectZomboid64.json` or `ProjectZomboid64.bat`: it passes `-agentlib:zbNative` on the command line of each profile that uses Java mods. When you uninstall, it also removes `-agentlib:zbNative` from those two files if ZombieBuddy's own installer put it there.
 - Steam: for the Workshop it loads the `steam_api64.dll` that ships with the game and identifies itself as Project Zomboid (App ID 108600). While the Workshop screen is open, Steam shows you as playing Project Zomboid. The session is closed before the game is launched.
 - Steam data: it reads, without changing them, `loginusers.vdf`, `localconfig.vdf` and the avatar cache to show your name, picture and hours played. It also reads the Windows registry to find where Steam is installed.
 - Its own files: profiles go in `%USERPROFILE%\PZModManager\perfiles`, and settings, caches and logs in `%APPDATA%\PZModManager`.
