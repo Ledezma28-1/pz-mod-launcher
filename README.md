@@ -8,7 +8,7 @@ The interface is available in English and Spanish.
 
 ## Download
 
-Get the installer from [Releases](https://github.com/Ledezma28-1/pz-mod-launcher/releases/latest).
+Get the installer from [Releases](https://github.com/Ledezma28-1/pz-mod-launcher/releases/latest). The app also has a [Steam Workshop page](https://steamcommunity.com/sharedfiles/filedetails/?id=3840658470); subscribing to it adds nothing to the game.
 
 Each installer is built by [GitHub Actions](.github/workflows/release.yml) from the tagged source in this repository, not on someone's PC. The release notes list its SHA-256, and GitHub signs a record of where it was built, which you can check with the [GitHub CLI](https://cli.github.com):
 

@@ -8,7 +8,7 @@ La interfaz está en español y en inglés.
 
 ## Descarga
 
-Descarga el instalador desde [Releases](https://github.com/Ledezma28-1/pz-mod-launcher/releases/latest).
+Descarga el instalador desde [Releases](https://github.com/Ledezma28-1/pz-mod-launcher/releases/latest). La app también tiene [página en el Workshop de Steam](https://steamcommunity.com/sharedfiles/filedetails/?id=3840658470); suscribirse no añade nada al juego.
 
 Cada instalador lo compila [GitHub Actions](.github/workflows/release.yml) a partir del código etiquetado de este repositorio, no el PC de nadie. Las notas de la versión traen su SHA-256, y GitHub firma un registro de dónde se compiló, que puedes comprobar con [GitHub CLI](https://cli.github.com):
 
