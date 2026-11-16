@@ -1,6 +1,6 @@
 <script lang="ts">
   import { arrows } from '../keys';
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, untrack } from 'svelte';
   import Search from '@lucide/svelte/icons/search';
   import ExternalLink from '@lucide/svelte/icons/external-link';
   import Check from '@lucide/svelte/icons/check';
@@ -176,7 +176,7 @@
 
   $effect(() => {
     void [searched, order, tags.join('|'), page, mode];
-    load();
+    untrack(load);
   });
 
   type Memory = { text: string; searched: string; order: WorkshopSort; tags: string[]; page: number; sel: number | null; isCol: boolean };

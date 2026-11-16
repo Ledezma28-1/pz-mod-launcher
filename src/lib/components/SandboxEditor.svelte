@@ -56,7 +56,10 @@
   let timer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => () => clearTimeout(timer));
 
+  let turn = 0;
+
   async function loadSchema() {
+    const mine = ++turn;
     error = null;
     data = null;
     progress = null;
@@ -65,6 +68,7 @@
     timer = setTimeout(() => (showLoad = true), 200);
     try {
       const d = await api.sandboxSchema(id, i18n.language);
+      if (mine !== turn) return;
       data = d;
       page = d.schema.server[0]?.id ?? d.schema.sandbox[0]?.id ?? null;
       const qs = new URLSearchParams(location.search);
@@ -72,14 +76,14 @@
       if (qs.get('sbsearch')) search = qs.get('sbsearch')!;
       if (d.servers.length) {
         name = d.servers[0];
-        await loadValues(`server:${d.servers[0]}`);
+        await loadValues(`server:${d.servers[0]}`, mine);
       } else {
-        await loadValues('default');
+        await loadValues('default', mine);
       }
     } catch (e) {
-      error = message(e);
+      if (mine === turn) error = message(e);
     } finally {
-      clearTimeout(timer);
+      if (mine === turn) clearTimeout(timer);
     }
   }
 
@@ -89,10 +93,11 @@
     loadSchema();
   });
 
-  async function loadValues(o: string) {
+  async function loadValues(o: string, mine = turn) {
     loading = true;
     try {
       const v = await api.sandboxValues(id, i18n.language, o);
+      if (mine !== turn) return;
       sandbox = v.sandbox;
       if (o === 'default' || o.startsWith('server:') || Object.keys(server).length === 0) server = v.server;
       origin = o;

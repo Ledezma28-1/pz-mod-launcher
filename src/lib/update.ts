@@ -31,7 +31,7 @@ export function isNewer(remote: string, local: string): boolean {
 }
 
 export async function latestRelease(local: string, fetcher: typeof fetch = fetch): Promise<Release | null> {
-  const r = await fetcher(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' } });
+  const r = await fetcher(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(10_000) });
   if (!r.ok) throw new Error(`GitHub: HTTP ${r.status}`);
   const j = (await r.json()) as { tag_name?: string; html_url?: string };
   if (!j.tag_name || !j.html_url?.startsWith('https://github.com/')) return null;

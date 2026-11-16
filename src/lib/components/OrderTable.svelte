@@ -250,6 +250,7 @@
       e.preventDefault();
       const step = e.key === 'ArrowDown' ? 1 : -1;
       if (e.altKey && current >= 0) {
+        if (app.taken) return;
         const f = list[current];
         const target = f.index + step;
         if (target >= 0 && target < v.rows.length) moveTo(f.index, target);

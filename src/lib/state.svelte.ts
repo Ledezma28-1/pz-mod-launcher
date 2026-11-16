@@ -125,6 +125,7 @@ class State {
       void this.zbAfterChange();
     });
     await this.loadEnvironment();
+    void this.addDownloaded();
     this.zbResume();
     void this.zbAfterChange();
     void this.loadSteamProfile();
@@ -446,10 +447,15 @@ class State {
     }
   }
 
-  private toAdd = new Map<number, string>();
+  private toAdd = new Map<number, string>(readPendingAdds());
+
+  private saveToAdd() {
+    writeText('ws-pending-add', JSON.stringify([...this.toAdd]));
+  }
 
   addWhenDownloads(ids: number[], profile: string) {
     for (const id of ids) this.toAdd.set(id, profile);
+    this.saveToAdd();
     void this.addDownloaded();
   }
 
@@ -463,6 +469,7 @@ class State {
         try {
           await api.add(profile, mods.map((m) => m.key));
           this.toAdd.delete(ws);
+          this.saveToAdd();
           const name = this.profiles.find((p) => p.id === profile)?.name ?? '';
           this.notify(t('ws.added_auto', { m: mods[0].name, p: name }));
           if (profile === this.profileId) await this.loadView();
@@ -702,6 +709,15 @@ class State {
 }
 
 const MAX_LINES = 20_000;
+
+function readPendingAdds(): [number, string][] {
+  try {
+    const v = JSON.parse(readText('ws-pending-add') ?? '[]') as unknown;
+    return Array.isArray(v) ? v.filter((x): x is [number, string] => Array.isArray(x) && typeof x[0] === 'number' && typeof x[1] === 'string') : [];
+  } catch {
+    return [];
+  }
+}
 
 export function readText(k: string): string | null {
   try {
