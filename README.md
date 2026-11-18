@@ -13,7 +13,7 @@ Get the installer from [Releases](https://github.com/Ledezma28-1/pz-mod-launcher
 Each installer is built by [GitHub Actions](.github/workflows/release.yml) from the tagged source in this repository, not on someone's PC. The release notes list its SHA-256, and GitHub signs a record of where it was built, which you can check with the [GitHub CLI](https://cli.github.com):
 
 ```bash
-gh attestation verify PZ.Mod.Manager_0.3.1_x64-setup.exe --repo Ledezma28-1/pz-mod-launcher
+gh attestation verify PZ.Mod.Manager_0.4.0_x64-setup.exe --repo Ledezma28-1/pz-mod-launcher
 ```
 
 [VirusTotal report for v0.1.0](https://www.virustotal.com/gui/file/ce47540fafe8558b1a718a4bd1cec76fddf5c78f9b91287d96c80678ddf47890): 2 of 69 engines flag it (Arctic Wolf and SecureAge, both machine-learning engines). These are false positives that unsigned installers often get; Microsoft Defender, Kaspersky, ESET, BitDefender and the rest find nothing.
@@ -42,8 +42,8 @@ The GIFs and screenshots use sample data.
 
 ## Features
 
-- Isolated profiles: each one uses its own folder through `-cachedir`, so a profile's saves, options and mod list never mix with another profile's or with the game's own.
-- Load order built from the same rules the game reads (`require`, `loadModAfter`, `loadModBefore`), with automatic and manual ordering.
+- Isolated profiles: each one uses its own folder through `-cachedir`, so a profile's saves, options and mod list never mix with another profile's or with the game's own. When you add mods to a profile, it can add them to the profile's existing saves too.
+- Load order built from the same rules the game reads (`require`, `loadModAfter`, `loadModBefore`), with automatic and manual ordering. The list can be split into named sections (fold, drag, sort one section at a time); the game still gets a plain list.
 - Conflict detection: missing requirements, mods for another game version or for Build 41, incompatible mods, duplicate IDs, requirement cycles, files one mod overrides in another, Lua functions that mods overwrite in each other, and Java patches on the same methods.
 - ZombieBuddy: install, update and uninstall it, with a backup of whatever changes in the game folder.
 - The Workshop inside the app: search mods and collections, subscribe, and add them to a profile.

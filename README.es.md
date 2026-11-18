@@ -13,7 +13,7 @@ Descarga el instalador desde [Releases](https://github.com/Ledezma28-1/pz-mod-la
 Cada instalador lo compila [GitHub Actions](.github/workflows/release.yml) a partir del código etiquetado de este repositorio, no el PC de nadie. Las notas de la versión traen su SHA-256, y GitHub firma un registro de dónde se compiló, que puedes comprobar con [GitHub CLI](https://cli.github.com):
 
 ```bash
-gh attestation verify PZ.Mod.Manager_0.3.1_x64-setup.exe --repo Ledezma28-1/pz-mod-launcher
+gh attestation verify PZ.Mod.Manager_0.4.0_x64-setup.exe --repo Ledezma28-1/pz-mod-launcher
 ```
 
 [Informe de VirusTotal de la v0.1.0](https://www.virustotal.com/gui/file/ce47540fafe8558b1a718a4bd1cec76fddf5c78f9b91287d96c80678ddf47890): 2 de 69 motores lo marcan (Arctic Wolf y SecureAge, los dos de aprendizaje automático). Son falsos positivos habituales en instaladores sin firmar; Microsoft Defender, Kaspersky, ESET, BitDefender y los demás no encuentran nada.
@@ -42,8 +42,8 @@ Los GIF y las capturas usan datos de ejemplo y están en inglés.
 
 ## Qué hace
 
-- Perfiles aislados: cada uno usa su carpeta con `-cachedir`, así que las partidas, las opciones y la lista de mods de un perfil no se mezclan con las de otro ni con las del juego.
-- Orden de carga calculado con las mismas reglas que lee el juego (`require`, `loadModAfter`, `loadModBefore`), con orden automático y orden manual.
+- Perfiles aislados: cada uno usa su carpeta con `-cachedir`, así que las partidas, las opciones y la lista de mods de un perfil no se mezclan con las de otro ni con las del juego. Si añades mods a un perfil, también puede añadirlos a sus partidas ya creadas.
+- Orden de carga calculado con las mismas reglas que lee el juego (`require`, `loadModAfter`, `loadModBefore`), con orden automático y orden manual. La lista se puede dividir en secciones con nombre (plegar, arrastrar, ordenar una sección sola); el juego sigue recibiendo una lista normal.
 - Detección de conflictos: requisitos que faltan, mods de otra versión del juego o de Build 41, mods incompatibles, IDs repetidos, ciclos de requisitos, archivos que un mod pisa a otro, funciones Lua que se anulan entre mods y parches Java que tocan los mismos métodos.
 - ZombieBuddy: lo instala, lo actualiza y lo desinstala, con copia de seguridad de lo que cambia en la carpeta del juego.
 - Workshop dentro de la app: buscar mods y colecciones, suscribirse y añadirlos a un perfil.
