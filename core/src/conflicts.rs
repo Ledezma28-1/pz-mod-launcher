@@ -112,6 +112,14 @@ pub enum Kind {
         methods: Vec<String>,
         replaced: Vec<String>,
     },
+    SectionOrder {
+        needs: String,
+        section: String,
+    },
+    SectionSoftRule {
+        after: String,
+        section: String,
+    },
     ModifiedInstall {
         detail: String,
     },
@@ -196,6 +204,7 @@ pub enum Fix {
     Accept(Vec<(String, String)>),
     RemoveCopy(String),
     Keep(String, Vec<String>),
+    MoveToSection(String, String),
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -387,6 +396,12 @@ impl Finding {
                 "{m} parchean los mismos métodos del juego ({}): suelen encadenarse; si el juego falla ahí, son los primeros sospechosos",
                 methods.join(", ")
             ),
+            Kind::SectionOrder { needs, .. } => format!(
+                "«{m}» necesita «{needs}», que está en una sección posterior: el juego lo cargará antes igualmente"
+            ),
+            Kind::SectionSoftRule { after, section } => format!(
+                "«{m}» pide cargar después de «{after}», que está en la sección posterior «{section}»: no se aplica"
+            ),
             Kind::ModifiedInstall { detail } => format!("instalación del juego modificada: {detail}"),
         }
     }
@@ -455,6 +470,7 @@ pub struct Context<'a> {
     pub modifications: Vec<Modification>,
     pub accepted_overrides: Vec<(String, String)>,
     pub maps: Vec<String>,
+    pub sections: Vec<String>,
 }
 
 pub struct ProfileEntry<'a> {
@@ -462,6 +478,7 @@ pub struct ProfileEntry<'a> {
     pub enabled: bool,
     pub pinned: bool,
     pub found: Option<&'a ScannedMod>,
+    pub section: usize,
 }
 
 const SHOWS: usize = 4;
@@ -1381,6 +1398,7 @@ fn loads_alone(
         enabled: true,
         pinned: false,
         found: None,
+        section: 0,
     };
     let mut list: Vec<&ProfileEntry> = active.to_vec();
     list.push(&probe);
@@ -1653,6 +1671,14 @@ pub fn analyze(entries: &[ProfileEntry], visible: &[ScannedMod], ctx: &Context) 
                 vec![]
             },
         });
+    }
+
+    if !ctx.sections.is_empty() {
+        out.extend(section_findings(
+            entries,
+            &order::edges(&entry_order),
+            &ctx.sections,
+        ));
     }
 
     let mut loaded: Vec<(&ProfileEntry, &ScannedMod)> = active
@@ -2299,6 +2325,70 @@ pub fn analyze(entries: &[ProfileEntry], visible: &[ScannedMod], ctx: &Context) 
     out
 }
 
+fn section_findings(
+    entries: &[ProfileEntry],
+    edges: &[order::Edge],
+    names: &[String],
+) -> Vec<Finding> {
+    let section: BTreeMap<String, usize> = entries
+        .iter()
+        .map(|e| (normalize_id(&e.id), e.section))
+        .collect();
+    let name = |k: usize| {
+        k.checked_sub(1)
+            .and_then(|i| names.get(i))
+            .cloned()
+            .unwrap_or_default()
+    };
+    let slot: BTreeMap<String, usize> = entries
+        .iter()
+        .enumerate()
+        .map(|(i, e)| (normalize_id(&e.id), i))
+        .collect();
+    let mut out = Vec::new();
+    let mut needed: BTreeMap<&str, (usize, Vec<&str>)> = BTreeMap::new();
+    for a in edges {
+        let (Some(&sb), Some(&sa)) = (section.get(&a.before), section.get(&a.after)) else {
+            continue;
+        };
+        if sb <= sa {
+            continue;
+        }
+        match a.rule {
+            order::Rule::Requires | order::Rule::ZbFixed => {
+                let n = needed.entry(&a.before).or_insert((sa, Vec::new()));
+                n.0 = n.0.min(sa);
+                if !n.1.contains(&a.after.as_str()) {
+                    n.1.push(&a.after);
+                }
+            }
+            order::Rule::LoadAfter | order::Rule::LoadBefore => out.push(Finding {
+                severity: Severity::Detail,
+                mods: vec![a.after.clone()],
+                kind: Kind::SectionSoftRule {
+                    after: a.before.clone(),
+                    section: name(sb),
+                },
+                fixes: vec![],
+            }),
+            _ => {}
+        }
+    }
+    for (needs, (sa, mut by)) in needed {
+        by.sort_by_key(|m| slot.get(*m).copied().unwrap_or(usize::MAX));
+        out.push(Finding {
+            severity: Severity::Warning,
+            mods: by.into_iter().map(str::to_string).collect(),
+            kind: Kind::SectionOrder {
+                needs: needs.to_string(),
+                section: name(sa),
+            },
+            fixes: vec![Fix::MoveToSection(needs.to_string(), name(sa))],
+        });
+    }
+    out
+}
+
 pub fn profile_entries<'a>(
     profile: &crate::profiles::Profile,
     visible: &'a [ScannedMod],
@@ -2314,6 +2404,7 @@ pub fn profile_entries<'a>(
                 .iter()
                 .find(|m| !e.key.is_empty() && m.key == e.key)
                 .or_else(|| visible.iter().find(|m| m.id() == Some(e.id.as_str()))),
+            section: profile.section_index(e),
         })
         .collect()
 }

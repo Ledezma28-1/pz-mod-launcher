@@ -105,6 +105,7 @@ const es = {
   'help.order.t': "Orden de carga",
   'help.order.p1': "El juego carga los mods en el orden de la lista. «Ordenar» agrupa los mods por tipo y pone delante de cada uno los que necesita, respetando sus reglas (`require`, `loadModAfter`, `loadModBefore`). Ves la propuesta antes de aplicarla.",
   'help.order.p2': "También puedes ordenar a mano: arrastra una fila, usa [Alt]+[↑] y [Alt]+[↓], o activa «Orden manual» para usar las flechas y escribir el número de puesto.",
+  'help.order.p3': "«Nueva sección» divide la lista en bloques con nombre («Armas», «Mapas»…). Una sección se renombra con doble clic, se pliega y se arrastra con todos sus mods; su casilla los activa o desactiva a la vez. El juego no ve las secciones: recibe la misma lista de siempre. «Ordenar» ordena dentro de cada sección y deja las secciones donde están. Si un mod necesita otro que está en una sección más abajo, aparece un aviso con un botón para subirlo.",
   'help.conflicts.t': "Conflictos",
   'help.conflicts.p1': "«Bloquea» (rojo) significa que el juego no cargará ese mod o fallará: falta un requisito, hay un ciclo, el mod no es para tu versión… «Aviso» (ocre) significa que funcionará, pero conviene mirarlo: archivos que se pisan, aprobaciones de ZombieBuddy…",
   'help.conflicts.p2': "En la pestaña Conflictos cada uno explica su causa y cómo arreglarlo. Dos mods con el mismo archivo siempre se pisan: elige cuál gana («Que gane…») o déjalo como está («Dar por bueno») y no volverá a avisar.",
@@ -876,9 +877,55 @@ const es = {
   'common.accept': 'Aceptar',
   'common.yes': 'Sí',
   'common.no': 'No',
+  'order.applied': 'Orden aplicado.',
+  'sections.new': 'Nueva sección',
+  'sections.new_help': 'Crea una sección que empieza en el mod seleccionado (o vacía al final)',
+  'sections.new_name': 'Sección nueva',
+  'sections.from_categories': 'Crear secciones por categoría',
+  'sections.from_categories_help': 'Una sección por cada tipo de mod del orden automático; luego puedes renombrarlas o moverlas',
+  'sections.name': 'Nombre de la sección',
+  'sections.rename': 'Renombrar',
+  'sections.delete': 'Borrar sección',
+  'sections.delete_help': 'Sus mods pasan a la sección de encima',
+  'sections.move_up': 'Subir sección',
+  'sections.move_down': 'Bajar sección',
+  'sections.menu': 'Más opciones de la sección',
+  'sections.sort_this': 'Ordenar solo esta sección',
+  'sections.fold': 'Plegar o desplegar (Alt+clic: todas)',
+  'sections.toggle': 'Activar o desactivar todos los mods de «{s}»',
+  'sections.move_to': 'Mover a sección',
+  'sections.none': 'Sin sección',
+  'sections.problems': 'Problemas en «{s}»: {n}',
+  'sections.done.create': 'Sección «{s}» creada.',
+  'sections.done.rename': 'Sección renombrada.',
+  'sections.done.move': 'Sección movida.',
+  'sections.done.delete': 'Sección «{s}» borrada.',
+  'sections.done.assign': '{n} mods movidos a «{s}».',
+  'sections.done.assign_one': '«{d}» movido a «{s}».',
+  'sections.done.categories': 'Secciones creadas por categoría.',
+  'sections.done.toggle_on': '{n} mods activados en «{s}».',
+  'sections.done.toggle_off': '{n} mods desactivados en «{s}».',
+  'sections.done.move_mod': 'Mod movido.',
+  'conflict.fix.MoveToSection': 'Mover {d} a «{s}»',
+  'conflict.fix.MoveToSection_help': 'El juego lo carga antes de todos modos: así la lista enseña el orden real',
+  'saves.title': 'Partidas sin los mods nuevos:',
+  'saves.summary': '{s} no tienen {m}. El juego carga cada partida con su propia lista.',
+  'saves.summary_one': '«{p}» no tiene {m}. El juego carga cada partida con su propia lista.',
+  'saves.n': '{n} partidas',
+  'saves.mods': '{n} mods activos del perfil',
+  'saves.mods_one': '1 mod activo del perfil',
+  'saves.choose': 'Elegir partidas',
+  'saves.add': 'Añadirlos a las partidas',
+  'saves.add_help': 'Solo añade (nunca quita), en el orden del perfil, y guarda una copia mods.txt.bak',
+  'saves.ignore': 'Ignorar',
+  'saves.ignore_help': 'No vuelve a avisar por estos mods en estas partidas; sí por los que añadas después',
+  'saves.missing': 'Faltan: {m}',
+  'saves.map_note': 'Mods con mapa ({m}): el mapa no aparecerá en esas partidas, que guardan su propia lista de mapas.',
+  'saves.done': 'Mods añadidos a las partidas: {n}.',
+  'saves.ignored': 'Aviso ignorado para esas partidas.',
 };
 
-type Key = keyof typeof es;
+export type Key = keyof typeof es;
 
 const en: Record<Key, string> = {
   'app.name': 'PZ Mod Manager',
@@ -980,6 +1027,7 @@ const en: Record<Key, string> = {
   'help.order.t': "Load order",
   'help.order.p1': "The game loads mods in list order. “Sort” groups mods by type and puts each mod’s requirements before it, following their rules (`require`, `loadModAfter`, `loadModBefore`). You see the proposal before applying it.",
   'help.order.p2': "You can also sort by hand: drag a row, use [Alt]+[↑] and [Alt]+[↓], or turn on “Manual order” to use the arrows and type the position number.",
+  'help.order.p3': "“New section” splits the list into named blocks (“Weapons”, “Maps”…). Double-click a section to rename it; fold it or drag it with all its mods, and use its checkbox to enable or disable them at once. The game never sees sections: it gets the same list as always. “Sort” sorts inside each section and leaves the sections where they are. If a mod needs one that sits in a section further down, a warning appears with a button to move it up.",
   'help.conflicts.t': "Conflicts",
   'help.conflicts.p1': "“Blocking” (red) means the game won’t load that mod or will fail: a missing requirement, a cycle, a mod not made for your version… “Warning” (ochre) means it will work but is worth a look: overwritten files, ZombieBuddy approvals…",
   'help.conflicts.p2': "On the Conflicts tab each one explains its cause and how to fix it. Two mods with the same file always override each other: choose which one wins (“Let … win”) or leave it as it is (“Keep as is”) and it won’t warn again.",
@@ -1750,6 +1798,52 @@ const en: Record<Key, string> = {
   'common.accept': 'OK',
   'common.yes': 'Yes',
   'common.no': 'No',
+  'order.applied': 'Order applied.',
+  'sections.new': 'New section',
+  'sections.new_help': 'Creates a section starting at the selected mod (or an empty one at the end)',
+  'sections.new_name': 'New section',
+  'sections.from_categories': 'Make sections by category',
+  'sections.from_categories_help': 'One section per mod type of the automatic order; you can rename or move them afterwards',
+  'sections.name': 'Section name',
+  'sections.rename': 'Rename',
+  'sections.delete': 'Delete section',
+  'sections.delete_help': 'Its mods go to the section above',
+  'sections.move_up': 'Move section up',
+  'sections.move_down': 'Move section down',
+  'sections.menu': 'More section options',
+  'sections.sort_this': 'Sort only this section',
+  'sections.fold': 'Fold or unfold (Alt+click: all)',
+  'sections.toggle': 'Enable or disable every mod in “{s}”',
+  'sections.move_to': 'Move to section',
+  'sections.none': 'No section',
+  'sections.problems': 'Problems in “{s}”: {n}',
+  'sections.done.create': 'Section “{s}” created.',
+  'sections.done.rename': 'Section renamed.',
+  'sections.done.move': 'Section moved.',
+  'sections.done.delete': 'Section “{s}” deleted.',
+  'sections.done.assign': '{n} mods moved to “{s}”.',
+  'sections.done.assign_one': '“{d}” moved to “{s}”.',
+  'sections.done.categories': 'Sections created by category.',
+  'sections.done.toggle_on': '{n} mods enabled in “{s}”.',
+  'sections.done.toggle_off': '{n} mods disabled in “{s}”.',
+  'sections.done.move_mod': 'Mod moved.',
+  'conflict.fix.MoveToSection': 'Move {d} to “{s}”',
+  'conflict.fix.MoveToSection_help': 'The game loads it earlier anyway: this way the list shows the real order',
+  'saves.title': 'Saves without the new mods:',
+  'saves.summary': '{s} lack {m}. The game loads each save with its own list.',
+  'saves.summary_one': '“{p}” lacks {m}. The game loads each save with its own list.',
+  'saves.n': '{n} saves',
+  'saves.mods': '{n} mods enabled in the profile',
+  'saves.mods_one': '1 mod enabled in the profile',
+  'saves.choose': 'Choose saves',
+  'saves.add': 'Add them to the saves',
+  'saves.add_help': 'Only adds (never removes), in profile order, and keeps a mods.txt.bak copy',
+  'saves.ignore': 'Ignore',
+  'saves.ignore_help': 'Stops warning about these mods in these saves; mods you add later still warn',
+  'saves.missing': 'Missing: {m}',
+  'saves.map_note': 'Mods with a map ({m}): the map won’t show up in those saves, which keep their own map list.',
+  'saves.done': 'Mods added to the saves: {n}.',
+  'saves.ignored': 'Warning ignored for those saves.',
 };
 
 const dictionaries: Record<Language, Record<Key, string>> = { es, en };
@@ -1788,11 +1882,12 @@ export function ruleText(a: Pick<Edge, 'before' | 'after' | 'rule'>) {
 }
 
 export function fixText(a: Fix): string {
-  return t(`conflict.fix.${a.action}` as Key, { d: fixMod(a) });
+  const s = a.action === 'MoveToSection' ? a.data[1] || t('sections.none') : '';
+  return t(`conflict.fix.${a.action}` as Key, { d: fixMod(a), s });
 }
 
 export function fixMod(a: Fix): string {
-  if (a.action === 'Win' || a.action === 'Keep') return a.data[0];
+  if (a.action === 'Win' || a.action === 'Keep' || a.action === 'MoveToSection') return a.data[0];
   if (a.action === 'Accept') return '';
   return 'data' in a ? String(a.data) : '';
 }
@@ -1801,6 +1896,7 @@ export function fixHelp(a: Fix): string | undefined {
   if (a.action === 'Win') return t('conflict.fix.Win_help', { d: a.data[0], r: a.data[1].map((x) => `«${x}»`).join(', ') });
   if (a.action === 'Accept') return t('conflict.fix.Accept_help');
   if (a.action === 'Keep') return t('conflict.fix.Keep_help', { r: a.data[1].map((x) => `«${x}»`).join(', ') });
+  if (a.action === 'MoveToSection') return t('conflict.fix.MoveToSection_help');
   return undefined;
 }
 
@@ -1903,6 +1999,10 @@ export function findingCause(h: Finding, id: string): string {
       return en ? 'ZombieBuddy off' : 'ZombieBuddy inactivo';
     case 'JavaPatchOverlap':
       return en ? 'same game method' : 'mismo método del juego';
+    case 'SectionOrder':
+      return en ? `${x.needs} in a later section` : `${x.needs} en una sección posterior`;
+    case 'SectionSoftRule':
+      return en ? `after ${x.after}: not applied` : `tras ${x.after}: no se aplica`;
     case 'ModifiedInstall':
       return en ? 'game modified' : 'juego modificado';
   }
@@ -2156,6 +2256,20 @@ export function findingText(h: Finding): string {
         : inEnglish
           ? `${m} patch the same game methods (${x.methods.join(', ')}). They usually chain; if the game crashes there, they are the first suspects.`
           : `${m} parchean los mismos métodos del juego (${x.methods.join(', ')}). Suelen encadenarse; si el juego falla ahí, son los primeros sospechosos.`;
+    case 'SectionOrder': {
+      const q = (s: string) => (inEnglish ? `“${s}”` : `«${s}»`);
+      const rest = h.mods.length - 3;
+      const shown = h.mods.slice(0, 3).map(q).join(', ');
+      const who = rest > 0 ? (inEnglish ? `${shown} and ${rest} more` : `${shown} y ${rest} más`) : shown;
+      const one = h.mods.length === 1;
+      return inEnglish
+        ? `${who} ${one ? 'needs' : 'need'} ${q(x.needs)}, which is in a later section. The game loads ${q(x.needs)} first anyway, so the list doesn’t show the real order.`
+        : `${who} ${one ? 'necesita' : 'necesitan'} ${q(x.needs)}, que está en una sección posterior. El juego cargará ${q(x.needs)} antes igualmente, así que la lista no enseña el orden real.`;
+    }
+    case 'SectionSoftRule':
+      return inEnglish
+        ? `“${m}” asks to load after “${x.after}”, which is in the later section “${x.section}”. The automatic order doesn’t cross sections, so it isn’t applied.`
+        : `«${m}» pide cargar después de «${x.after}», que está en la sección posterior «${x.section}». El orden automático no cruza secciones, así que no se aplica.`;
     case 'ModifiedInstall':
       return inEnglish ? `Game installation modified: ${x.detail}.` : `Instalación del juego modificada: ${x.detail}.`;
   }

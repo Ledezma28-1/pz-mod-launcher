@@ -23,6 +23,8 @@ pub struct ModEntry {
     #[serde(default)]
     #[serde(rename = "fijado")]
     pub pinned: bool,
+    #[serde(default, rename = "seccion", skip_serializing_if = "Option::is_none")]
+    pub section: Option<String>,
 }
 
 fn default_true() -> bool {
@@ -175,6 +177,8 @@ pub struct Profile {
     #[serde(default)]
     #[serde(rename = "aceptados")]
     pub accepted_overrides: Vec<AcceptedOverride>,
+    #[serde(default, rename = "secciones", skip_serializing_if = "Vec::is_empty")]
+    pub sections: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
@@ -219,6 +223,7 @@ impl Profile {
                     id,
                     enabled: true,
                     pinned: false,
+                    section: self.sections.last().cloned(),
                 });
                 true
             }
@@ -234,12 +239,13 @@ impl Profile {
         if !self.mods.iter().any(|m| normalize_id(&m.id) == of) {
             return false;
         }
-        let m = self.mods.remove(i);
+        let mut m = self.mods.remove(i);
         let j = self
             .mods
             .iter()
             .position(|m| normalize_id(&m.id) == of)
             .expect("comprobado arriba");
+        m.section = self.mods[j].section.clone();
         self.mods.insert(j + 1, m);
         self.accept(&of, &id);
         true
@@ -319,6 +325,7 @@ impl Profile {
             zombiebuddy: ZbSettings::default(),
             last_use: None,
             accepted_overrides: Vec::new(),
+            sections: Vec::new(),
         }
     }
 
@@ -368,6 +375,7 @@ impl Profile {
             .map(Some)
             .collect();
         let mut next = theirs.iter();
+        let last_section = self.sections.last().cloned();
         let take = |id: &str, old: &mut Vec<Option<ModEntry>>| -> ModEntry {
             let found = old
                 .iter_mut()
@@ -378,6 +386,7 @@ impl Profile {
                 id: id.to_string(),
                 enabled: true,
                 pinned: false,
+                section: last_section.clone(),
             });
             e.enabled = true;
             e
@@ -415,6 +424,7 @@ impl Profile {
         }
         self.mods = out;
         self.maps = game.maps.clone();
+        self.regroup();
     }
 
     pub fn mod_list(&self) -> ModList {

@@ -16,7 +16,7 @@
   async function apply() {
     const id = v.id;
     app.proposal = null;
-    await app.run(() => api.sort(id, true));
+    await app.run(() => api.sort(id, true, app.proposalSection), t('order.applied'));
   }
 
   const categoryText = (c: string) => t(`cat.${c}` as Parameters<typeof t>[0]);

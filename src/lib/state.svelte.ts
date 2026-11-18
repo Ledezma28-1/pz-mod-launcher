@@ -1,12 +1,12 @@
 
 import { onConsole, onChangedMods, onSession, onViewProgress, api, inTauri, message } from './api';
-import { fixMod, t } from './i18n.svelte';
+import { fixMod, t, type Key } from './i18n.svelte';
 import { steam } from './steam.svelte';
 import { channelOf, shouldInstall, updateToNotify, type Channel } from './zb-flow';
 import { PALETTES, type Palette } from './palettes';
 import { DISCLAIMER_VERSION, shouldShow } from './disclaimer';
 import { justUpdated, latestRelease, releaseUrl, type Release } from './update';
-import type { SteamProfile, AppSettingsData, BisectAnswer, BisectView, Fix, Environment, GameListChange, Issue, SessionState, OrderProposal, ProfileSummary, ProfileView, ViewProgress, WorkshopState } from './types';
+import type { Layout, SaveGap, SteamProfile, AppSettingsData, BisectAnswer, BisectView, Fix, Environment, GameListChange, Issue, SessionState, OrderProposal, ProfileSummary, ProfileView, ViewProgress, WorkshopState } from './types';
 
 export const ZB_IDS: Record<Channel, number> = { estable: 3619862853, beta: 3812624292 };
 
@@ -200,8 +200,17 @@ class State {
   async loadGameList() {
     const id = this.profileId;
     if (!id) return;
+    void this.loadSaveGaps();
     const c = await api.gameList(id).catch(() => null);
     if (id === this.profileId) this.gameList = c;
+  }
+
+  saveGaps = $state<SaveGap[]>([]);
+  async loadSaveGaps() {
+    const id = this.profileId;
+    if (!id) return;
+    const g = await api.savesGaps(id).catch(() => []);
+    if (id === this.profileId) this.saveGaps = g;
   }
 
   async run(f: () => Promise<unknown>, success?: string) {
@@ -223,6 +232,7 @@ class State {
     try {
       const v = await f();
       if (success) this.notify(success);
+      void this.loadSaveGaps();
       if (id === this.profileId && v.id === id) {
         this.view = v;
         const r = this.profiles.find((p) => p.id === id);
@@ -651,6 +661,8 @@ class State {
         return this.run(() => api.win(id, a.data[0], a.data[1]), done('Win'));
       case 'Accept':
         return this.run(() => api.accept(id, a.data), done('Accept'));
+      case 'MoveToSection':
+        return this.sectionAssign([a.data[0]], a.data[1] || null, true).then(() => undefined);
       case 'Keep':
         return this.run(
           () => api.setEnabledMany(id, a.data[1], false),
@@ -673,10 +685,82 @@ class State {
     }
   }
 
-  async proposeOrder() {
+  private async layoutEdit(f: (id: string) => Promise<Layout>, success: string): Promise<boolean> {
+    const id = this.profileId;
+    if (!id) return false;
+    this.taken = true;
+    try {
+      const prev = await f(id);
+      this.notify(success, 'ok', () => api.restoreLayout(id, prev));
+      await this.loadView();
+      const r = this.profiles.find((p) => p.id === id);
+      if (r && this.view?.id === id) r.sections = this.view.sections;
+      return true;
+    } catch (e) {
+      this.notify(message(e), 'error');
+      return false;
+    } finally {
+      this.taken = false;
+    }
+  }
+
+  sectionCreate(name: string, atMod: string | null) {
+    return this.layoutEdit((id) => api.sectionCreate(id, name, atMod), t('sections.done.create', { s: name.trim() }));
+  }
+
+  sectionRename(old: string, name: string) {
+    return this.layoutEdit((id) => api.sectionRename(id, old, name), t('sections.done.rename'));
+  }
+
+  sectionMove(name: string, to: number) {
+    return this.layoutEdit((id) => api.sectionMove(id, name, to), t('sections.done.move'));
+  }
+
+  sectionDelete(name: string) {
+    return this.layoutEdit((id) => api.sectionDelete(id, name), t('sections.done.delete', { s: name }));
+  }
+
+  sectionAssign(ids: string[], name: string | null, first = false) {
+    return this.layoutEdit(
+      (id) => api.sectionAssign(id, ids, name, first),
+      ids.length === 1
+        ? t('sections.done.assign_one', { d: this.view?.rows.find((r) => r.id === ids[0])?.name ?? ids[0], s: name ?? t('sections.none') })
+        : t('sections.done.assign', { n: ids.length, s: name ?? t('sections.none') }),
+    );
+  }
+
+  moveMod(from: number, to: number, section: string | null, success?: string) {
+    return this.layoutEdit((id) => api.moveTo(id, from, to, section), success ?? t('sections.done.move_mod'));
+  }
+
+  sectionsFromCategories() {
+    const keys = ['coreRequirement', 'tweaks', 'resource', 'map', 'vehicle', 'code', 'clothes', 'ui', 'other', 'translation', 'undefined'];
+    const names = Object.fromEntries(keys.map((k) => [k, t(`cat.${k}` as Key)]));
+    return this.layoutEdit((id) => api.sectionsFromCategories(id, names), t('sections.done.categories'));
+  }
+
+  async sectionToggle(name: string | null) {
+    const id = this.profileId;
+    const rows = this.view?.rows.filter((r) => (r.section ?? null) === name) ?? [];
+    if (!id || rows.length === 0) return;
+    const on = !rows.every((r) => r.enabled);
+    const changed = rows.filter((r) => r.enabled !== on).map((r) => r.id);
+    const s = name ?? t('sections.none');
+    await this.run(() => api.setEnabledMany(id, changed, on));
+    if ((this.state as { kind: string } | null)?.kind !== 'error') {
+      this.notify(t(on ? 'sections.done.toggle_on' : 'sections.done.toggle_off', { n: changed.length, s }), 'ok', () =>
+        api.setEnabledMany(id, changed, !on),
+      );
+    }
+  }
+
+  proposalSection = $state<string | null>(null);
+
+  async proposeOrder(section: string | null = null) {
     if (!this.profileId) return;
     try {
-      this.proposal = await api.sort(this.profileId, false);
+      this.proposalSection = section;
+      this.proposal = await api.sort(this.profileId, false, section);
       this.tab = 'order';
     } catch (e) {
       this.notify(message(e), 'error');

@@ -1,5 +1,5 @@
 
-import type { AppSettingsData, BisectView, Diagnosis, ModDetails, Environment, Row, Finding, LibraryMod, ProfileSummary, ModKind, ProfileView } from './types';
+import type { AppSettingsData, BisectView, Diagnosis, ModDetails, Environment, Row, Finding, LibraryMod, ProfileSummary, ModKind, ProfileView, Layout } from './types';
 
 const state = new URLSearchParams(location.search).get('state') ?? 'normal';
 const zbDemo = new URLSearchParams(location.search).get('zb');
@@ -61,6 +61,51 @@ for (let i = 0; i < carsExtra; i++) seeds.push([`coche${i}`, `Coche ${i}`, 'vehi
 let active: Record<string, boolean> = Object.fromEntries(seeds.map(([id]) => [id, id !== 'Lugli_FastLoading']));
 let order = seeds.map(([id]) => id);
 if (carsExtra) order = [...order.filter((id) => id !== 'damnlib'), 'damnlib'];
+
+let sections: string[] = [];
+const sectionOf: Record<string, string | null> = {};
+if (new URLSearchParams(location.search).get('sections')) {
+  sections = ['Utilities & Bug Fixes', 'Weapons', 'Gameplay'];
+  const third = Math.ceil(order.length / 3);
+  order.forEach((id, i) => (sectionOf[id] = sections[Math.min(2, Math.floor(i / third))]));
+}
+const secIndex = (id: string) => {
+  const s = sectionOf[id];
+  return s == null ? 0 : sections.indexOf(s) + 1;
+};
+function regroup() {
+  order = order
+    .map((id, i) => [id, i] as const)
+    .sort((a, b) => secIndex(a[0]) - secIndex(b[0]) || a[1] - b[1])
+    .map(([id]) => id);
+}
+function layout(): Layout {
+  return { sections: [...sections], mods: order.map((id) => [id, sectionOf[id] ?? null]) };
+}
+function restoreLayout(l: Layout) {
+  sections = [...l.sections];
+  const listed = l.mods.map(([id]) => id).filter((id) => order.includes(id));
+  order = [...listed, ...order.filter((id) => !listed.includes(id))];
+  for (const [id, s] of l.mods) sectionOf[id] = s;
+  regroup();
+}
+function sectionEdit(f: () => void): Layout {
+  const prev = layout();
+  f();
+  regroup();
+  return prev;
+}
+function sectionName(name: string, except = -1) {
+  const n = name.trim();
+  if (!n || n.length > 60 || /[\u0000-\u001f]/.test(n)) throw 'nombre de sección no válido';
+  if (sections.some((s, i) => i !== except && s.toLowerCase() === n.toLowerCase())) throw 'ya hay una sección con ese nombre';
+  return n;
+}
+function sectionAt(name: string) {
+  const i = sections.indexOf(name);
+  if (i < 0) throw 'no existe esa sección';
+  return i;
+}
 
 const allFindings: Finding[] = [
   {
@@ -319,6 +364,19 @@ const seedOf = (id: string) => seeds.find((x) => x[0] === id) ?? outsideOfProfil
 
 function view(): ProfileView {
   const findings = allFindings.filter((h) => h.mods.every((m) => active[m] !== false));
+  for (const [after, befores] of Object.entries(requires)) {
+    for (const before of befores) {
+      if (!order.includes(before) || !order.includes(after) || !active[before] || !active[after]) continue;
+      if (secIndex(before) <= secIndex(after)) continue;
+      const section = sectionOf[after] ?? '';
+      findings.push({
+        severity: 'Warning',
+        mods: [after],
+        kind: { kind: 'SectionOrder', needs: before, section },
+        fixes: [{ action: 'MoveToSection', data: [before, section] }],
+      });
+    }
+  }
   const rows: Row[] = order.map((id, i) => {
     const s = seedOf(id);
     const worst = findings
@@ -339,6 +397,7 @@ function view(): ProfileView {
       workshop_id: s[4],
       author: s[5],
       severity: worst ? (worst.toLowerCase() as Row['severity']) : null,
+      section: secIndex(id) > 0 ? sectionOf[id]! : null,
     };
   });
   const edges = Object.entries(requires).flatMap(([after, before]) =>
@@ -361,6 +420,7 @@ function view(): ProfileView {
     edges,
     settings: { xmx: '8g', game_extra: '-debug', policy: 'prompt', use_zb: 'auto', probe: !!new URLSearchParams(location.search).get('probe') },
     counts: { active: rows.filter((f) => f.enabled).length, blocks: count('Blocks'), warning: count('Warning'), info: count('Info'), detail: count('Detail') },
+    sections: [...sections],
   };
 }
 
@@ -467,6 +527,7 @@ function sbReal() {
 }
 
 let viewsOpened = 0;
+let savesFixed = false;
 
 export async function demo<T>(cmd: string, args: Record<string, unknown>): Promise<T> {
   await wait(state === 'loading' ? 1e9 : 120);
@@ -481,7 +542,7 @@ export async function demo<T>(cmd: string, args: Record<string, unknown>): Promi
       return r(state === 'nosteam' ? null : { steamid: '76561199808685238', name: 'Superviviente', minutes: 18_760, last_played: Math.floor(Date.now() / 1000) - 86_400 * 2, avatar: null });
     case 'profiles':
       if (state === 'empty') return r([profiles[1], profiles[0], profiles[2]]);
-      return r(state === 'noprofiles' ? [] : profiles);
+      return r(state === 'noprofiles' ? [] : profiles.map((p) => (p.id === 'mi-partida' ? { ...p, sections: [...sections] } : p)));
     case 'profiles_unreadable':
       return r(
         new URLSearchParams(location.search).get('unreadable')
@@ -502,6 +563,24 @@ export async function demo<T>(cmd: string, args: Record<string, unknown>): Promi
     case 'profile_set_enabled':
       active = { ...active, [args.modId as string]: args.enabled as boolean };
       return r(view());
+    case 'saves_gaps':
+      return r(
+        new URLSearchParams(location.search).get('saves') && args.id !== 'vainilla' && !savesFixed
+          ? [
+              { dir: 'Apocalypse/2026-11-10_21-04-33', name: '2026-11-10_21-04-33', mode: 'Apocalypse', modified: Math.floor(Date.now() / 1000) - 86_400, missing: ['ZBetterModList', 'RavenCreekB42'], with_map: ['RavenCreekB42'] },
+              { dir: 'Sandbox/Ruta 66', name: 'Ruta 66', mode: 'Sandbox', modified: Math.floor(Date.now() / 1000) - 86_400 * 6, missing: ['ZBetterModList'], with_map: [] },
+            ]
+          : [],
+      );
+    case 'saves_add':
+      savesFixed = true;
+      return r(3);
+    case 'saves_restore':
+      savesFixed = false;
+      return r(undefined);
+    case 'saves_ignore':
+      savesFixed = true;
+      return r(undefined);
     case 'profile_game_list':
       return r(
         new URLSearchParams(location.search).get('gamelist') && args.id !== 'vainilla'
@@ -516,24 +595,104 @@ export async function demo<T>(cmd: string, args: Record<string, unknown>): Promi
       }
       return r(n);
     }
-    case 'profile_add':
+    case 'profile_add': {
+      const section = args.section === '' ? null : ((args.section as string | null) ?? sections.at(-1) ?? null);
       for (const key of args.keys as string[]) {
         const id = key.split('/')[1];
-        if (!order.includes(id)) order.push(id);
+        if (!order.includes(id)) {
+          order.push(id);
+          sectionOf[id] = section;
+        }
         active = { ...active, [id]: args.enabled as boolean };
       }
-      return r(undefined);
-    case 'profile_move': {
-      const [m] = order.splice(args.from as number, 1);
-      order.splice(args.to as number, 0, m);
+      regroup();
       return r(undefined);
     }
+    case 'profile_move':
+      return r(
+        sectionEdit(() => {
+          const [m] = order.splice(args.from as number, 1);
+          order.splice(args.to as number, 0, m);
+          sectionOf[m] = (args.section as string | null) ?? null;
+        }),
+      );
+    case 'section_create': {
+      const name = sectionName(args.name as string);
+      return r(
+        sectionEdit(() => {
+          const at = args.atMod as string | null;
+          if (at === null) return void sections.push(name);
+          const i = order.indexOf(at);
+          const k = secIndex(at);
+          for (let j = i; j < order.length && secIndex(order[j]) === k; j++) sectionOf[order[j]] = name;
+          sections.splice(k, 0, name);
+        }),
+      );
+    }
+    case 'section_rename': {
+      const i = sectionAt(args.old as string);
+      const name = sectionName(args.new as string, i);
+      return r(
+        sectionEdit(() => {
+          for (const id of order) if (sectionOf[id] === args.old) sectionOf[id] = name;
+          sections[i] = name;
+        }),
+      );
+    }
+    case 'section_move': {
+      const i = sectionAt(args.name as string);
+      return r(sectionEdit(() => sections.splice(Math.min(args.to as number, sections.length - 1), 0, ...sections.splice(i, 1))));
+    }
+    case 'section_delete': {
+      const i = sectionAt(args.name as string);
+      return r(
+        sectionEdit(() => {
+          for (const id of order) if (sectionOf[id] === args.name) sectionOf[id] = i > 0 ? sections[i - 1] : null;
+          sections.splice(i, 1);
+        }),
+      );
+    }
+    case 'section_assign': {
+      const name = args.name as string | null;
+      if (name !== null) sectionAt(name);
+      const ids = args.modIds as string[];
+      return r(
+        sectionEdit(() => {
+          const moved = order.filter((id) => ids.includes(id));
+          const rest = order.filter((id) => !ids.includes(id));
+          order = args.first ? [...moved, ...rest] : [...rest, ...moved];
+          for (const id of ids) sectionOf[id] = name;
+        }),
+      );
+    }
+    case 'sections_from_categories': {
+      if (sections.length) throw 'el perfil ya tiene secciones';
+      const names = args.names as Record<string, string>;
+      return r(
+        sectionEdit(() => {
+          for (const id of order) {
+            const kind = ({ java: 'tweaks', lua: 'code' } as Record<string, string>)[seedOf(id)[2]] ?? seedOf(id)[2];
+            const name = names[kind] ?? kind;
+            if (!sections.includes(name)) sections.push(name);
+            sectionOf[id] = name;
+          }
+        }),
+      );
+    }
+    case 'profile_restore_layout':
+      restoreLayout(args.layout as Layout);
+      return r(undefined);
     case 'profile_sort': {
       const next = sortedOrder();
+      const only = args.section as string | null | undefined;
       const moves = sortMoves
         .filter((m) => order.indexOf(m.id) !== next.indexOf(m.id))
+        .filter((m) => !only || sectionOf[m.id] === only)
         .map((m) => ({ ...m, from: order.indexOf(m.id), to: next.indexOf(m.id), guessed: true, position: null }));
-      if (args.apply) order = next;
+      if (args.apply) {
+        order = next;
+        regroup();
+      }
       return r({ order: next, moves, cycles: [], rules_file: 2 });
     }
     case 'mod_details':

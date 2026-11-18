@@ -29,6 +29,7 @@
   import EmptyState from './lib/components/EmptyState.svelte';
   import ConflictBanner from './lib/components/ConflictBanner.svelte';
   import GameListBanner from './lib/components/GameListBanner.svelte';
+  import SavesBanner from './lib/components/SavesBanner.svelte';
   import { api, message } from './lib/api';
 
   let gamePath = $state('');
@@ -229,6 +230,7 @@
         {:else}
           <ProfileHeader />
           {#if app.tab === 'order' && app.gameList && !(app.session && !app.session.finished)}<GameListBanner />{/if}
+          {#if app.tab === 'order' && app.saveGaps.length > 0 && !(app.session && !app.session.finished)}<SavesBanner />{/if}
           {#if app.tab === 'order' && app.view.counts.blocks > 0}<ConflictBanner />{/if}
           {#if app.tab === 'order'}
             {#if app.view.rows.length === 0}

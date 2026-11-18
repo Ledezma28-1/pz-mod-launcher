@@ -1,5 +1,7 @@
 
 import type {
+  Layout,
+  SaveGap,
   BisectAnswer,
   ProfileSettings,
   AppSettingsData,
@@ -81,18 +83,34 @@ export const api = {
   setEnabled: (id: string, modId: string, enabled: boolean) => call<ProfileView>('profile_set_enabled', { id, modId, enabled }),
   setEnabledMany: (id: string, modIds: string[], enabled: boolean) => call<number>('profile_set_enabled_many', { id, modIds, enabled }),
   gameList: (id: string) => call<GameListChange | null>('profile_game_list', { id }),
+  savesGaps: (id: string) => call<SaveGap[]>('saves_gaps', { id }),
+  savesAdd: (id: string, dirs: string[]) => call<number>('saves_add', { id, dirs }),
+  savesRestore: (id: string, dirs: string[]) => call<void>('saves_restore', { id, dirs }),
+  savesIgnore: (id: string, dirs: string[]) => call<void>('saves_ignore', { id, dirs }),
   takeGameList: (id: string) => call<void>('profile_take_game_list', { id }),
   discardGameList: (id: string) => call<void>('profile_discard_game_list', { id }),
   pin: (id: string, modId: string, pinned: boolean) => call<void>('profile_pin', { id, modId, pinned }),
-  moveTo: (id: string, from: number, to: number) => call<void>('profile_move', { id, from, to }),
-  add: (id: string, keys: string[], enabled = true) => call<void>('profile_add', { id, keys, enabled }),
+  moveTo: (id: string, from: number, to: number, section: string | null) =>
+    call<Layout>('profile_move', { id, from, to, section }),
+  sectionCreate: (id: string, name: string, atMod: string | null) => call<Layout>('section_create', { id, name, atMod }),
+  sectionRename: (id: string, old: string, name: string) => call<Layout>('section_rename', { id, old, new: name }),
+  sectionMove: (id: string, name: string, to: number) => call<Layout>('section_move', { id, name, to }),
+  sectionDelete: (id: string, name: string) => call<Layout>('section_delete', { id, name }),
+  sectionAssign: (id: string, modIds: string[], name: string | null, first = false) =>
+    call<Layout>('section_assign', { id, modIds, name, first }),
+  sectionsFromCategories: (id: string, names: Record<string, string>) =>
+    call<Layout>('sections_from_categories', { id, names }),
+  restoreLayout: (id: string, layout: Layout) => call<void>('profile_restore_layout', { id, layout }),
+  add: (id: string, keys: string[], enabled = true, section: string | null = null) =>
+    call<void>('profile_add', { id, keys, enabled, section }),
   remove: (id: string, modId: string) => call<void>('profile_remove', { id, modId }),
   removeMany: (id: string, modIds: string[]) => call<Removed[]>('profile_remove_many', { id, modIds }),
   putBack: (id: string, removed: Removed[]) => call<void>('profile_put_back', { id, removed }),
   win: (id: string, modId: string, rivals: string[]) => call<void>('profile_win', { id, modId, rivals }),
   accept: (id: string, pairs: [string, string][]) => call<void>('profile_accept', { id, pairs }),
   settings: (id: string, settings: ProfileSettings) => call<void>('profile_settings', { id, settings }),
-  sort: (id: string, apply: boolean) => call<OrderProposal>('profile_sort', { id, apply }),
+  sort: (id: string, apply: boolean, section: string | null = null) =>
+    call<OrderProposal>('profile_sort', { id, apply, section }),
   doExport: (id: string) => call<Export>('profile_export', { id }),
   sandboxSchema: (id: string, language: string) => call<SandboxSchema>('sandbox_schema', { id, language }),
   sandboxValues: (id: string, language: string, origin: string) => call<SandboxValues>('sandbox_values', { id, language, origin }),

@@ -117,6 +117,7 @@ pub struct ProfileSummary {
     pub active: usize,
     pub total: usize,
     pub last_use: Option<u64>,
+    pub sections: Vec<String>,
 }
 
 impl ProfileSummary {
@@ -127,6 +128,7 @@ impl ProfileSummary {
             active: p.mods.iter().filter(|m| m.enabled).count(),
             total: p.mods.len(),
             last_use: p.last_use,
+            sections: p.sections.clone(),
         }
     }
 }
@@ -194,6 +196,7 @@ pub struct Row {
     pub workshop_id: Option<u64>,
     pub author: Option<String>,
     pub severity: Option<String>,
+    pub section: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -236,6 +239,7 @@ pub struct ProfileView {
     pub edges: Vec<EdgeDto>,
     pub settings: ProfileSettings,
     pub counts: Count,
+    pub sections: Vec<String>,
 }
 
 impl ProfileView {
@@ -270,6 +274,11 @@ impl ProfileView {
                     workshop_id,
                     author: info.and_then(|x| x.author.clone()),
                     severity: worst(&e.id).map(str::to_string),
+                    section: p
+                        .mods
+                        .get(i)
+                        .filter(|m| p.section_index(m) > 0)
+                        .and_then(|m| m.section.clone()),
                 }
             })
             .collect();
@@ -303,6 +312,7 @@ impl ProfileView {
         ProfileView {
             id: p.id.clone(),
             name: p.name.clone(),
+            sections: p.sections.clone(),
             counts: Count::of(p, &findings),
             rows,
             findings,
@@ -955,6 +965,8 @@ pub struct SharedMod {
     #[serde(default)]
     #[serde(rename = "fijado")]
     pub pinned: bool,
+    #[serde(default, rename = "seccion", skip_serializing_if = "Option::is_none")]
+    pub section: Option<String>,
 }
 
 fn default_true() -> bool {
@@ -977,6 +989,8 @@ pub struct SharedProfile {
     pub launch: pzmm_core::profiles::LaunchSettings,
     #[serde(default)]
     pub zombiebuddy: pzmm_core::profiles::ZbSettings,
+    #[serde(default, rename = "secciones", skip_serializing_if = "Vec::is_empty")]
+    pub sections: Vec<String>,
 }
 
 #[derive(Serialize)]

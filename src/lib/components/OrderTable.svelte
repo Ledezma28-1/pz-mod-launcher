@@ -12,10 +12,16 @@
   import Plus from '@lucide/svelte/icons/plus';
   import X from '@lucide/svelte/icons/x';
   import Trash from '@lucide/svelte/icons/trash';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Ellipsis from '@lucide/svelte/icons/ellipsis';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import FolderPlus from '@lucide/svelte/icons/folder-plus';
+  import Layers from '@lucide/svelte/icons/layers';
   import AddMods from './AddMods.svelte';
   import { api, inTauri } from '../api';
   import { app } from '../state.svelte';
   import { t, kindText, findingCause, findingText } from '../i18n.svelte';
+  import { buildItems, checkState, foldedKey, type ViewItem } from '../sections';
   import type { Edge, Finding, Row, Removed } from '../types';
 
   const ROW = 30;
@@ -31,13 +37,61 @@
   let search = $state('');
   let container: HTMLDivElement | undefined = $state();
 
-  const visible = $derived.by(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return v.rows;
-    return v.rows.filter((f) => f.name.toLowerCase().includes(q) || f.id.toLowerCase().includes(q));
-  });
   const filtering = $derived(search.trim() !== '');
-  const position = $derived(new Map(v.rows.map((f, i) => [f.id, i])));
+  const matches = (f: Row) => {
+    const q = search.trim().toLowerCase();
+    return !q || f.name.toLowerCase().includes(q) || f.id.toLowerCase().includes(q);
+  };
+
+  const sections = $derived(app.view?.sections ?? []);
+  const hasSections = $derived(sections.length > 0);
+  let folded = $state<Set<string>>(new Set());
+  let foldedFor = '';
+  $effect(() => {
+    const id = app.view?.id;
+    if (!id || id === foldedFor) return;
+    foldedFor = id;
+    try {
+      folded = new Set(JSON.parse(localStorage.getItem(foldedKey(id)) ?? '[]'));
+    } catch {
+      folded = new Set();
+    }
+  });
+  function setFolded(s: Set<string>) {
+    folded = s;
+    try {
+      localStorage.setItem(foldedKey(v.id), JSON.stringify([...s]));
+    } catch {
+    }
+  }
+  function fold(name: string | null, e?: MouseEvent) {
+    if (name === null) return;
+    if (e?.altKey) {
+      setFolded(folded.has(name) ? new Set() : new Set(sections));
+      return;
+    }
+    const s = new Set(folded);
+    if (s.has(name)) s.delete(name);
+    else s.add(name);
+    setFolded(s);
+  }
+
+  let drag = $state<{ from: number; to: number; section?: string } | null>(null);
+  const items = $derived<ViewItem[]>(
+    buildItems(
+      app.view?.rows ?? [],
+      sections,
+      drag?.section ? new Set([...folded, drag.section]) : folded,
+      matches,
+      app.view?.findings ?? [],
+      drag?.section ? null : app.selection,
+      filtering,
+    ),
+  );
+  const visible = $derived(items.flatMap((i) => (i.type === 'mod' ? [i.row] : [])));
+  const position = $derived(new Map(items.flatMap((it, i) => (it.type === 'mod' ? [[it.row.id, i] as const] : []))));
+  const secIdx = (name: string | null) => (name === null ? 0 : sections.indexOf(name) + 1);
+  const sectionAt = (k: number) => (k <= 0 ? null : (sections[k - 1] ?? null));
 
   type Thread = { lane: number; y1: number; y2: number; broken: boolean; dependent: boolean };
   const threads = $derived.by<Thread[]>(() => {
@@ -156,9 +210,101 @@
     await app.runView(() => api.setEnabled(v.id, f.id, !f.enabled));
   }
 
-  async function moveTo(from: number, to: number) {
+  async function moveTo(from: number, to: number, success?: string) {
     if (from === to) return;
-    await app.run(() => api.moveTo(v.id, from, to));
+    await app.moveMod(from, to, v.rows[to]?.section ?? null, success);
+  }
+
+  async function stepMod(f: Row, dir: 1 | -1) {
+    const k = secIdx(f.section);
+    const next = v.rows[f.index + dir];
+    if (hasSections && (!next || secIdx(next.section) !== k)) {
+      const target = k + dir;
+      if (target < 0 || target > sections.length) return;
+      await app.moveMod(f.index, f.index, sectionAt(target));
+      return;
+    }
+    if (next) await moveTo(f.index, f.index + dir);
+  }
+  const firstStep = (f: Row) => f.index === 0 && (!hasSections || secIdx(f.section) === 0);
+  const lastStep = (f: Row) => f.index === v.rows.length - 1 && (!hasSections || secIdx(f.section) === sections.length);
+
+  let editing = $state<string | null>(null);
+  let headMenu = $state<string | null>(null);
+  let headSelected = $state<string | null>(null);
+  let nameError = $state('');
+
+  async function newSection() {
+    const base = t('sections.new_name');
+    let name = base;
+    for (let n = 2; sections.some((s) => s.toLowerCase() === name.toLowerCase()); n++) name = `${base} ${n}`;
+    if (await app.sectionCreate(name, app.selection)) {
+      editing = name;
+      nameError = '';
+    }
+  }
+
+  let saving = false;
+  async function saveName(old: string, field: HTMLInputElement) {
+    if (saving || editing !== old) return;
+    saving = true;
+    try {
+      await rename(old, field);
+    } finally {
+      saving = false;
+    }
+  }
+  async function rename(old: string, field: HTMLInputElement) {
+    const name = field.value.trim();
+    if (name === old) {
+      editing = null;
+      return;
+    }
+    if (await app.sectionRename(old, name)) {
+      editing = null;
+      nameError = '';
+    } else nameError = app.state?.text ?? '';
+  }
+
+  function keyName(e: KeyboardEvent, old: string) {
+    const field = e.currentTarget as HTMLInputElement;
+    e.stopPropagation();
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveName(old, field);
+    } else if (e.key === 'Escape') {
+      editing = null;
+      nameError = '';
+    }
+  }
+
+  function keyHead(e: KeyboardEvent, name: string | null) {
+    if (name === null || e.target instanceof HTMLInputElement) return;
+    if (e.key === 'F2') {
+      e.preventDefault();
+      editing = name;
+    } else if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (app.taken) return;
+      const i = sections.indexOf(name) + (e.key === 'ArrowDown' ? 1 : -1);
+      if (i >= 0 && i < sections.length) app.sectionMove(name, i);
+    }
+  }
+
+  function firstProblem(it: Extract<ViewItem, { type: 'header' }>) {
+    const ids = new Set(it.rows.map((r) => r.id));
+    const f = v.findings.find((h) => (h.severity === 'Blocks' || h.severity === 'Warning') && h.mods.some((m) => ids.has(m)));
+    const id = f?.mods.find((m) => ids.has(m));
+    if (!id) return;
+    if (it.name !== null && folded.has(it.name)) fold(it.name);
+    app.selection = id;
+    requestAnimationFrame(() => document.getElementById(`row-${v.rows.find((r) => r.id === id)?.index}`)?.scrollIntoView({ block: 'nearest' }));
+  }
+
+  async function assignTo(value: string) {
+    const ids = marked.size ? [...marked] : app.selection ? [app.selection] : [];
+    if (ids.length) await app.sectionAssign(ids, value === '' ? null : value);
   }
 
   const query = !inTauri && typeof location !== 'undefined' ? new URLSearchParams(location.search) : null;
@@ -186,8 +332,7 @@
       return;
     }
     app.selection = f.id;
-    await moveTo(f.index, to);
-    app.notify(t('table.moved', { n: f.name, p: to + 1 }));
+    await moveTo(f.index, to, t('table.moved', { n: f.name, p: to + 1 }));
     document.getElementById(`row-${to}`)?.scrollIntoView({ block: 'nearest' });
   }
 
@@ -231,6 +376,7 @@
   }
 
   function outsideOfMenu(e: MouseEvent) {
+    if (headMenu && !(e.target as Element).closest?.('.head-menu-box')) headMenu = null;
     if (menu && boxMenu && !boxMenu.contains(e.target as Node)) menu = false;
     if (selector && boxSelector && !boxSelector.contains(e.target as Node)) selector = false;
   }
@@ -251,9 +397,7 @@
       const step = e.key === 'ArrowDown' ? 1 : -1;
       if (e.altKey && current >= 0) {
         if (app.taken) return;
-        const f = list[current];
-        const target = f.index + step;
-        if (target >= 0 && target < v.rows.length) moveTo(f.index, target);
+        stepMod(list[current], step);
         return;
       }
       go(current < 0 ? 0 : current + step);
@@ -274,31 +418,55 @@
     }
   }
 
-  let drag = $state<{ from: number; to: number } | null>(null);
   let body: HTMLDivElement | undefined = $state();
 
-  function startDrag(e: PointerEvent, f: Row) {
+  function startDrag(e: PointerEvent, k: number, section?: string) {
     if (filtering || e.button !== 0) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    drag = { from: f.index, to: f.index };
-    app.selection = f.id;
+    drag = { from: k, to: k, section };
+    const it = items[k];
+    if (it?.type === 'mod') app.selection = it.row.id;
   }
   function moveDrag(e: PointerEvent) {
     if (!drag || !body) return;
     const box = body.getBoundingClientRect();
     const k = Math.floor((e.clientY - box.top) / ROW);
-    drag.to = Math.max(0, Math.min(v.rows.length - 1, k));
+    drag.to = Math.max(0, Math.min(items.length - 1, k));
     if (container) {
       const c = container.getBoundingClientRect();
       if (e.clientY < c.top + 40) container.scrollTop -= 12;
       else if (e.clientY > c.bottom - 40) container.scrollTop += 12;
     }
   }
+  const sectionOfItem = (it: ViewItem) => (it.type === 'header' ? it.name : it.row.section);
+
+  function dropTarget(f: Row, it: ViewItem, after: boolean): { to: number; section: string | null } {
+    const rest = v.rows.filter((r) => r.id !== f.id);
+    if (it.type === 'mod') {
+      const i = rest.findIndex((r) => r.id === it.row.id);
+      return { to: after ? i + 1 : i, section: it.row.section };
+    }
+    const k = secIdx(it.name);
+    const section = after ? it.name : sectionAt(k - 1);
+    return { to: rest.filter((r) => secIdx(r.section) < k).length, section };
+  }
+
   async function unpin() {
     if (!drag) return;
-    const { from, to } = drag;
+    const { from, to, section } = drag;
     drag = null;
-    await moveTo(from, to);
+    if (from === to) return;
+    const target = items[to];
+    if (section !== undefined) {
+      const k = secIdx(sectionOfItem(target));
+      await app.sectionMove(section, Math.max(0, k - 1));
+      return;
+    }
+    const it = items[from];
+    if (it?.type !== 'mod' || !target) return;
+    const d = dropTarget(it.row, target, to > from);
+    if (d.to === it.row.index && d.section === it.row.section) return;
+    await app.moveMod(it.row.index, d.to, d.section);
   }
 
   const markY = $derived(
@@ -307,6 +475,24 @@
 </script>
 
 <svelte:window onclick={outsideOfMenu} />
+
+{#snippet moveSelect()}
+  <label class="move-to">
+    <span class="hidden">{t('sections.move_to')}</span>
+    <select
+      class="field"
+      disabled={app.taken}
+      onchange={(e) => {
+        assignTo(e.currentTarget.value);
+        e.currentTarget.value = '\u0001';
+      }}
+    >
+      <option value={'\u0001'} disabled selected>{t('sections.move_to')}…</option>
+      <option value="">{t('sections.none')}</option>
+      {#each sections as s (s)}<option value={s}>{s}</option>{/each}
+    </select>
+  </label>
+{/snippet}
 
 <div class="bar">
   <div class="sel" bind:this={boxSelector}>
@@ -322,6 +508,17 @@
   <button class="btn" class:enabled-manual={manual} aria-pressed={manual} title={t('table.manual_help')} onclick={toggleManual}>
     <ArrowUpDown size={14} strokeWidth={1.75} />{t('table.manual')}
   </button>
+  <button class="btn" title={t('sections.new_help')} disabled={app.taken} onclick={newSection}>
+    <FolderPlus size={14} strokeWidth={1.75} />{t('sections.new')}
+  </button>
+  {#if !hasSections && v.rows.length > 0}
+    <button class="btn" title={t('sections.from_categories_help')} disabled={app.taken} onclick={() => app.sectionsFromCategories()}>
+      <Layers size={14} strokeWidth={1.75} />{t('sections.from_categories')}
+    </button>
+  {/if}
+  {#if hasSections && marked.size === 0 && app.selection}
+    {@render moveSelect()}
+  {/if}
   <div class="sel" bind:this={boxMenu}>
     <button class="btn" aria-haspopup="menu" aria-expanded={menu} onclick={() => (menu = !menu)}>
       <ListChecks size={14} strokeWidth={1.75} />{t('select.button')}<ChevronDown size={13} strokeWidth={2} />
@@ -361,6 +558,9 @@
     <button class="btn" disabled={app.taken} onclick={() => apply(visibleMarked, true)}>{t('select.set_enabled')}</button>
     <button class="btn" disabled={app.taken} onclick={() => apply(visibleMarked, false)}>{t('select.disable')}</button>
     <button class="btn remove-batch" disabled={app.taken} onclick={() => remove([...marked])}><Trash size={14} strokeWidth={1.75} />{t('batch.remove')}</button>
+    {#if hasSections}
+      {@render moveSelect()}
+    {/if}
     <span class="gap"></span>
     <button class="btn subtle icon" aria-label={t('batch.clear')} title={t('batch.clear')} onclick={() => (marked = new Set())}><X size={14} strokeWidth={2} /></button>
   </div>
@@ -393,11 +593,11 @@
     <span class="c-remove"></span>
   </div>
 
-  {#if visible.length === 0}
+  {#if items.length === 0}
     <p class="without-results">{t('table.without_results', { q: search })}</p>
   {:else}
-    <div class="body" bind:this={body} style:height="{visible.length * ROW}px">
-      <svg class="threads" width={MARGIN} height={visible.length * ROW} aria-hidden="true">
+    <div class="body" bind:this={body} style:height="{items.length * ROW}px">
+      <svg class="threads" width={MARGIN} height={items.length * ROW} aria-hidden="true">
         {#each strokes.lines as h, k (k)}
           <path d={h.d} style:stroke-dashoffset={h.offset} class:broken={h.broken} class:dependent={h.dependent} />
         {/each}
@@ -409,7 +609,191 @@
         <div class="mark-unpin" style:top="{markY - 1}px"></div>
       {/if}
 
-      {#each visible as f (f.id)}
+      {#each items as it, k (it.type === 'header' ? `#${it.name ?? ''}` : it.row.id)}
+        {#if it.type === 'header'}
+          {@const state = checkState(it.rows)}
+          {@const problems = it.problems.blocks + it.problems.warning}
+          <div
+            class="section-row"
+            role="row"
+            tabindex="-1"
+            class:none={it.name === null}
+            class:chosen={headSelected === it.name && it.name !== null}
+            class:dragged={drag?.section === it.name && it.name !== null}
+            aria-expanded={it.name === null ? undefined : !it.folded}
+            onclick={() => (headSelected = it.name)}
+            onkeydown={(e) => keyHead(e, it.name)}
+          >
+            <span class="c-margin"></span>
+            {#if it.name !== null}
+              {@const name = it.name}
+              <span
+                class="c-handle head-handle"
+                title={t('table.move')}
+                role="presentation"
+                class:disabled={filtering}
+                onpointerdown={(e) => startDrag(e, k, name)}
+                onpointermove={moveDrag}
+                onpointerup={unpin}
+                onpointercancel={() => (drag = null)}
+              >
+                <GripVertical size={14} strokeWidth={1.5} />
+              </span>
+            {:else}<span></span>{/if}
+            <span class="head-check">
+              <input
+                type="checkbox"
+                checked={state === 'all'}
+                indeterminate={state === 'some'}
+                disabled={it.total === 0 || app.taken}
+                aria-label={t('sections.toggle', { s: it.name ?? t('sections.none') })}
+                title={t('sections.toggle', { s: it.name ?? t('sections.none') })}
+                onclick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  app.sectionToggle(it.name);
+                }}
+              />
+            </span>
+            <span class="head-main" role="gridcell">
+              {#if it.name !== null}
+                <button
+                  class="fold"
+                  aria-label={t('sections.fold')}
+                  title={t('sections.fold')}
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    fold(it.name, e);
+                  }}
+                >
+                  {#if it.folded}<ChevronRight size={14} strokeWidth={2} />{:else}<ChevronDown size={14} strokeWidth={2} />{/if}
+                </button>
+              {/if}
+              {#if editing !== null && editing === it.name}
+                {@const old = editing}
+                <span class="name-edit">
+                  <!-- svelte-ignore a11y_autofocus -->
+                  <input
+                    class="field head-name"
+                    value={old}
+                    maxlength="60"
+                    autofocus
+                    aria-label={t('sections.name')}
+                    aria-invalid={nameError !== ''}
+                    onclick={(e) => e.stopPropagation()}
+                    onfocus={(e) => e.currentTarget.select()}
+                    onkeydown={(e) => keyName(e, old)}
+                    onblur={(e) => saveName(old, e.currentTarget)}
+                  />
+                  {#if nameError}<span class="name-error" role="alert">{nameError}</span>{/if}
+                </span>
+              {:else}
+                <span
+                  class="head-title"
+                  role="presentation"
+                  ondblclick={() => {
+                    if (it.name !== null) editing = it.name;
+                  }}>{it.name ?? t('sections.none')}</span
+                >
+              {/if}
+              <span class="head-count num">{it.active}/{it.total}</span>
+              {#if problems > 0}
+                {@const Icon = it.problems.blocks ? CircleX : TriangleAlert}
+                <button
+                  class="head-problems"
+                  class:blocks={it.problems.blocks > 0}
+                  aria-label={t('sections.problems', { n: problems, s: it.name ?? t('sections.none') })}
+                  title={t('sections.problems', { n: problems, s: it.name ?? t('sections.none') })}
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    firstProblem(it);
+                  }}><Icon size={13} strokeWidth={2} /><span class="num">{problems}</span></button
+                >
+              {/if}
+            </span>
+            {#if it.name !== null}
+              {@const name = it.name}
+              {@const i = sections.indexOf(name)}
+              <span class="head-actions">
+                <button
+                  class="arrow"
+                  title={t('sections.rename')}
+                  aria-label={t('sections.rename')}
+                  disabled={app.taken}
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    editing = name;
+                  }}><Pencil size={13} strokeWidth={2} /></button
+                >
+                <button
+                  class="arrow"
+                  title={t('sections.move_up')}
+                  aria-label={t('sections.move_up')}
+                  disabled={i === 0 || app.taken}
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    app.sectionMove(name, i - 1);
+                  }}><ChevronUp size={14} strokeWidth={2} /></button
+                >
+                <button
+                  class="arrow"
+                  title={t('sections.move_down')}
+                  aria-label={t('sections.move_down')}
+                  disabled={i === sections.length - 1 || app.taken}
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    app.sectionMove(name, i + 1);
+                  }}><ChevronDown size={14} strokeWidth={2} /></button
+                >
+                <button
+                  class="arrow danger"
+                  title={`${t('sections.delete')}: ${t('sections.delete_help')}`}
+                  aria-label={t('sections.delete')}
+                  disabled={app.taken}
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    app.sectionDelete(name);
+                  }}><Trash size={13} strokeWidth={1.75} /></button
+                >
+                <span class="head-menu-box">
+                  <button
+                    class="arrow"
+                    title={t('sections.menu')}
+                    aria-label={t('sections.menu')}
+                    aria-haspopup="menu"
+                    aria-expanded={headMenu === name}
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      headMenu = headMenu === name ? null : name;
+                    }}><Ellipsis size={14} strokeWidth={2} /></button
+                  >
+                  {#if headMenu === name}
+                    <div
+                      class="menu head-menu"
+                      role="menu"
+                      tabindex="-1"
+                      onkeydown={(e) => {
+                        if (e.key === 'Escape') headMenu = null;
+                      }}
+                    >
+                      <button
+                        class="option"
+                        role="menuitem"
+                        disabled={app.taken || it.total < 2}
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          headMenu = null;
+                          app.proposeOrder(name);
+                        }}>{t('sections.sort_this')}</button
+                      >
+                    </div>
+                  {/if}
+                </span>
+              </span>
+            {/if}
+          </div>
+        {:else}
+          {@const f = it.row}
         <div
           id="row-{f.index}"
           class="row"
@@ -420,7 +804,7 @@
           class:selected={app.selection === f.id}
           class:marked={marked.has(f.id)}
           class:inactive={!f.enabled}
-          class:dragged={drag?.from === f.index}
+          class:dragged={drag?.from === k && !drag?.section}
           onclick={(e) => select(f, e)}
           onkeydown={() => {}}
         >
@@ -432,7 +816,7 @@
             title={t('table.move')}
             role="presentation"
             class:disabled={filtering}
-            onpointerdown={(e) => startDrag(e, f)}
+            onpointerdown={(e) => startDrag(e, k)}
             onpointermove={moveDrag}
             onpointerup={unpin}
             onpointercancel={() => (drag = null)}
@@ -446,11 +830,11 @@
                 tabindex="-1"
                 aria-label={t('table.up', { n: f.name })}
                 title={t('table.up', { n: f.name })}
-                disabled={f.index === 0 || app.taken}
+                disabled={firstStep(f) || app.taken}
                 onclick={(e) => {
                   e.stopPropagation();
                   app.selection = f.id;
-                  moveTo(f.index, f.index - 1);
+                  stepMod(f, -1);
                 }}><ChevronUp size={14} strokeWidth={2} /></button
               >
               <button
@@ -458,11 +842,11 @@
                 tabindex="-1"
                 aria-label={t('table.down', { n: f.name })}
                 title={t('table.down', { n: f.name })}
-                disabled={f.index === v.rows.length - 1 || app.taken}
+                disabled={lastStep(f) || app.taken}
                 onclick={(e) => {
                   e.stopPropagation();
                   app.selection = f.id;
-                  moveTo(f.index, f.index + 1);
+                  stepMod(f, 1);
                 }}><ChevronDown size={14} strokeWidth={2} /></button
               >
             </span>
@@ -532,6 +916,7 @@
             >
           </span>
         </div>
+        {/if}
       {/each}
     </div>
   {/if}
@@ -973,5 +1358,149 @@
     margin: 0;
     padding: 24px 16px;
     color: var(--ink-2);
+  }
+  .section-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 40px 18px 28px minmax(0, 1fr) auto;
+    align-items: center;
+    height: 30px;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-2);
+    font-size: var(--t-s);
+  }
+  .section-row.none {
+    background: color-mix(in srgb, var(--surface-2) 50%, var(--surface));
+  }
+  .section-row.chosen {
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+  .section-row.dragged {
+    background: var(--accent-soft-2);
+  }
+  .section-row:hover .c-handle,
+  .section-row.chosen .c-handle {
+    opacity: 1;
+  }
+  .head-check {
+    display: grid;
+    place-items: center;
+  }
+  .head-check input {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .head-main {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+  .fold {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radio);
+    background: none;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .fold:hover {
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .head-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .none .head-title {
+    padding-left: 4px;
+    font-weight: 500;
+    color: var(--ink-2);
+  }
+  .head-count {
+    color: var(--ink-3);
+    font-size: var(--t-xs);
+  }
+  .head-problems {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 20px;
+    padding: 0 6px;
+    border: 1px solid transparent;
+    border-radius: var(--radio);
+    background: none;
+    color: var(--warn);
+    font: inherit;
+    font-size: var(--t-xs);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .head-problems.blocks {
+    color: var(--danger);
+  }
+  .head-problems:hover {
+    border-color: var(--line-strong);
+    background: var(--surface);
+  }
+  .name-edit {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .head-name {
+    width: 220px;
+    height: 22px;
+    font-weight: 600;
+  }
+  .name-error {
+    position: absolute;
+    top: 26px;
+    left: 0;
+    z-index: 4;
+    padding: 3px 8px;
+    border: 1px solid var(--danger);
+    border-radius: var(--radio);
+    background: var(--surface);
+    color: var(--danger);
+    font-size: var(--t-xs);
+    white-space: nowrap;
+  }
+  .head-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding-right: 6px;
+    opacity: 0;
+  }
+  .section-row:hover .head-actions,
+  .section-row:focus-within .head-actions,
+  .section-row.chosen .head-actions {
+    opacity: 1;
+  }
+  .arrow.danger:hover:not(:disabled) {
+    color: var(--danger);
+  }
+  .head-menu-box {
+    position: relative;
+  }
+  .head-menu {
+    left: auto;
+    right: 0;
+    min-width: 220px;
+  }
+  .move-to .field {
+    height: 28px;
   }
 </style>

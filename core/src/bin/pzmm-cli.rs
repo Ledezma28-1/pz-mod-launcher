@@ -361,6 +361,7 @@ fn profile(args: &[String]) -> pzmm_core::CoreResult<()> {
                         id: mid.to_string(),
                         enabled: true,
                         pinned: false,
+                        section: None,
                     }
                 })
                 .collect();
@@ -661,6 +662,7 @@ fn resolve_entries<'a>(
                 .iter()
                 .find(|m| !e.key.is_empty() && m.key == e.key)
                 .or_else(|| visible.iter().find(|m| m.id() == Some(e.id.as_str()))),
+            section: p.section_index(e),
         })
         .collect()
 }
@@ -709,7 +711,8 @@ fn order_cli(args: &[String]) -> pzmm_core::CoreResult<()> {
             println!("  {c:<16} {n:>4} ({guessed} adivinadas)");
         }
     }
-    let mut r = order::sort_with(&entries, &options);
+    let section_of: Vec<usize> = p.mods.iter().map(|m| p.section_index(m)).collect();
+    let mut r = pzmm_core::sections::sort_sections(&entries, &options, &section_of, None);
     let version = j
         .version
         .as_ref()
@@ -780,18 +783,7 @@ fn order_cli(args: &[String]) -> pzmm_core::CoreResult<()> {
         }
     }
     if args.iter().any(|x| x == "--apply") {
-        let mut reordered = Vec::with_capacity(p.mods.len());
-        for id in &r.order {
-            if let Some(pos) = p
-                .mods
-                .iter()
-                .position(|m| pzmm_core::modinfo::normalize_id(&m.id) == *id)
-            {
-                reordered.push(p.mods.remove(pos));
-            }
-        }
-        reordered.append(&mut p.mods);
-        p.mods = reordered;
+        pzmm_core::sections::apply_order(&mut p, &r.order);
         a.save(&p)?;
         println!("Orden guardado en el perfil.");
     }
@@ -872,6 +864,7 @@ fn context_of<'a>(
             .map(|a| (a.loses.clone(), a.wins.clone()))
             .collect(),
         maps: p.maps.clone(),
+        sections: p.sections.clone(),
     }
 }
 
@@ -1009,6 +1002,7 @@ fn do_import(a: &ProfileStore, id: &str, list: &std::path::Path) -> pzmm_core::C
             id: mid.clone(),
             enabled: true,
             pinned: false,
+            section: None,
         })
         .collect();
     p.maps = l.maps;

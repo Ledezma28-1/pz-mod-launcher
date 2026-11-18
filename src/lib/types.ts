@@ -32,6 +32,7 @@ export interface ProfileSummary {
   active: number;
   total: number;
   last_use: number | null;
+  sections?: string[];
 }
 
 export interface FeaturedItem {
@@ -73,6 +74,7 @@ export interface Row {
   workshop_id: number | null;
   author: string | null;
   severity: RowSeverity | null;
+  section: string | null;
 }
 
 export interface Edge {
@@ -112,6 +114,8 @@ export type FindingKind =
   | { kind: 'ZbApproval'; state: ApprovalState; policy: string }
   | { kind: 'ZbModNotEnabled' }
   | { kind: 'JavaPatchOverlap'; methods: string[]; replaced: string[] }
+  | { kind: 'SectionOrder'; needs: string; section: string }
+  | { kind: 'SectionSoftRule'; after: string; section: string }
   | { kind: 'ModifiedInstall'; detail: string };
 
 export type Fix =
@@ -122,7 +126,8 @@ export type Fix =
   | { action: 'Win'; data: [string, string[]] }
   | { action: 'Accept'; data: [string, string][] }
   | { action: 'RemoveCopy'; data: string }
-  | { action: 'Keep'; data: [string, string[]] };
+  | { action: 'Keep'; data: [string, string[]] }
+  | { action: 'MoveToSection'; data: [string, string] };
 
 export interface ViewProgress {
   profile: string;
@@ -187,6 +192,21 @@ export interface ProfileView {
   edges: Edge[];
   settings: ProfileSettings;
   counts: { active: number; blocks: number; warning: number; info: number; detail: number };
+  sections: string[];
+}
+
+export interface SaveGap {
+  dir: string;
+  name: string;
+  mode: string;
+  modified: number;
+  missing: string[];
+  with_map: string[];
+}
+
+export interface Layout {
+  sections: string[];
+  mods: [string, string | null][];
 }
 
 export interface OrderProposal {

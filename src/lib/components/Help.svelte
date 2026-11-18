@@ -13,7 +13,7 @@
   const topics: { id: string; paragraphs: number; go?: Go }[] = [
     { id: 'profiles', paragraphs: 2, go: { screen: 'home', label: 'nav.home' } },
     { id: 'mods', paragraphs: 4, go: { screen: 'library', label: 'nav.library' } },
-    { id: 'order', paragraphs: 2, go: { screen: 'profile', tab: 'order', label: 'profile.tab.order' } },
+    { id: 'order', paragraphs: 3, go: { screen: 'profile', tab: 'order', label: 'profile.tab.order' } },
     { id: 'conflicts', paragraphs: 2, go: { screen: 'profile', tab: 'conflicts', label: 'profile.tab.conflicts' } },
     { id: 'zb', paragraphs: 2, go: { screen: 'zb', label: 'nav.zombiebuddy' } },
     { id: 'play', paragraphs: 2, go: { screen: 'home', label: 'nav.home' } },

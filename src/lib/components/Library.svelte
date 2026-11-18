@@ -9,6 +9,7 @@
   import PackageX from '@lucide/svelte/icons/package-x';
   import X from '@lucide/svelte/icons/x';
   import { api, inTauri, message } from '../api';
+  import { untrack } from 'svelte';
   import { app } from '../state.svelte';
   import { t, kindText } from '../i18n.svelte';
   import { detailsCache } from '../steam.svelte';
@@ -27,6 +28,17 @@
   let target = $state<string | null>(app.profileId);
   $effect(() => {
     if (!target || !app.profiles.some((p) => p.id === target)) target = app.profileId ?? app.profiles[0]?.id ?? null;
+  });
+  const targetSections = $derived(app.profiles.find((p) => p.id === target)?.sections ?? []);
+  let targetSection = $state('');
+  $effect(() => {
+    const to = target;
+    const sel = app.selection;
+    const secs = targetSections;
+    untrack(() => {
+      const picked = to === app.profileId ? app.view?.rows.find((r) => r.id === sel) : undefined;
+      targetSection = picked ? (picked.section ?? '') : (secs.at(-1) ?? '');
+    });
   });
 
   $effect(() => {
@@ -111,7 +123,7 @@
     const name = app.profiles.find((p) => p.id === profile)?.name ?? '';
     app.taken = true;
     try {
-      await api.add(profile, keys, enabled);
+      await api.add(profile, keys, enabled, targetSections.length ? targetSection : null);
       app.notify(t(enabled ? 'lib.done_on' : 'lib.done_off', { n: keys.length, p: name }));
       chosen = new Set();
       if (profile === app.profileId) await app.loadView();
@@ -210,6 +222,15 @@
           {#each app.profiles as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
         </select>
       </label>
+      {#if targetSections.length > 0}
+        <label class="target">
+          <span class="hidden">{t('sections.move_to')}</span>
+          <select class="field" bind:value={targetSection} aria-label={t('sections.move_to')}>
+            <option value="">{t('sections.none')}</option>
+            {#each targetSections as s (s)}<option value={s}>{s}</option>{/each}
+          </select>
+        </label>
+      {/if}
       <button class="btn" disabled={chosen.size === 0 || !target || app.taken} onclick={() => add(false)}>{t('lib.without_enable')}</button>
       <button class="btn primary" disabled={chosen.size === 0 || !target || app.taken} onclick={() => add(true)}>
         <Plus size={15} strokeWidth={2} />{chosen.size ? t('lib.add_enable', { n: chosen.size }) : t('lib.add_nothing')}

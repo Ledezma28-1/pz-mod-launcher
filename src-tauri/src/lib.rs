@@ -12,6 +12,7 @@ use pzmm_core::game::{self, Game};
 use pzmm_core::maintenance;
 use pzmm_core::mods::{self, ScannedMod};
 use pzmm_core::profiles::{self, ModEntry, Profile, ProfileStore};
+use pzmm_core::sections::Layout;
 use pzmm_core::steamworks::{self, Steamworks};
 use pzmm_core::version::Version;
 use pzmm_core::{PZ_APP_ID, backups, bisect, diagnosis, launch, links, order, steam, zb};
@@ -525,6 +526,7 @@ async fn profile_create(app: AppHandle, name: String, do_import: bool) -> R<Prof
                         id: mid.clone(),
                         enabled: true,
                         pinned: false,
+                        section: None,
                     })
                     .collect();
                 p.maps = l.maps;
@@ -650,6 +652,87 @@ async fn profile_take_game_list(app: AppHandle, id: String) -> R<()> {
     .await
 }
 
+fn enabled_ids(p: &Profile) -> Vec<String> {
+    p.mods
+        .iter()
+        .filter(|m| m.enabled)
+        .map(|m| pzmm_core::modinfo::normalize_id(&m.id))
+        .collect()
+}
+
+#[tauri::command]
+async fn saves_gaps(app: AppHandle, id: String) -> R<Vec<pzmm_core::saves::SaveGap>> {
+    in_thread(move || {
+        let p = store()?.load(&id).map_err(err)?;
+        let mut gaps = pzmm_core::saves::gaps(&store()?.cache(&id), &enabled_ids(&p));
+        if gaps.is_empty() {
+            return Ok(gaps);
+        }
+        let e = app.state::<AppState>();
+        let vis = visible_mods(&e, false)?;
+        for g in &mut gaps {
+            g.with_map = g
+                .missing
+                .iter()
+                .filter(|m| {
+                    vis.iter().any(|v| {
+                        v.id().map(pzmm_core::modinfo::normalize_id).as_deref() == Some(m.as_str())
+                            && !v.maps().is_empty()
+                    })
+                })
+                .cloned()
+                .collect();
+        }
+        Ok(gaps)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn saves_add(app: AppHandle, id: String, dirs: Vec<String>) -> R<usize> {
+    in_thread(move || {
+        no_game_open(&app)?;
+        let p = store()?.load(&id).map_err(err)?;
+        let cache = store()?.cache(&id);
+        let mut n = 0;
+        for d in &dirs {
+            n += pzmm_core::saves::add(&cache, d, &enabled_ids(&p)).map_err(err)?;
+        }
+        logging::info(&format!(
+            "partidas: {n} mods añadidos en {} partidas de «{}»",
+            dirs.len(),
+            p.name
+        ));
+        Ok(n)
+    })
+    .await
+}
+
+#[tauri::command]
+async fn saves_restore(app: AppHandle, id: String, dirs: Vec<String>) -> R<()> {
+    in_thread(move || {
+        no_game_open(&app)?;
+        let cache = store()?.cache(&id);
+        for d in &dirs {
+            pzmm_core::saves::restore(&cache, d).map_err(err)?;
+        }
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command(async)]
+fn saves_ignore(id: String, dirs: Vec<String>) -> R<()> {
+    let p = store()?.load(&id).map_err(err)?;
+    let cache = store()?.cache(&id);
+    for g in pzmm_core::saves::gaps(&cache, &enabled_ids(&p)) {
+        if dirs.contains(&g.dir) {
+            pzmm_core::saves::ignore(&cache, &g.dir, &g.missing).map_err(err)?;
+        }
+    }
+    Ok(())
+}
+
 #[tauri::command]
 async fn profile_discard_game_list(app: AppHandle, id: String) -> R<()> {
     in_thread(move || {
@@ -723,16 +806,100 @@ fn profile_pin(id: String, mod_id: String, pinned: bool) -> R<()> {
     })
 }
 
+fn edit_layout(id: &str, f: impl FnOnce(&mut Profile) -> Result<Layout, String>) -> R<Layout> {
+    let mut prev = None;
+    modify(id, |p| {
+        prev = Some(f(p)?);
+        Ok(())
+    })?;
+    prev.ok_or_else(|| "sin cambios".into())
+}
+
 #[tauri::command(async)]
-fn profile_move(id: String, from: usize, to: usize) -> R<()> {
+fn profile_move(id: String, from: usize, to: usize, section: Option<String>) -> R<Layout> {
+    edit_layout(&id, |p| p.move_mod(from, to, section.as_deref()))
+}
+
+#[tauri::command(async)]
+fn section_create(id: String, name: String, at_mod: Option<String>) -> R<Layout> {
+    edit_layout(&id, |p| p.section_create(&name, at_mod.as_deref()))
+}
+
+#[tauri::command(async)]
+fn section_rename(id: String, old: String, new: String) -> R<Layout> {
+    edit_layout(&id, |p| p.section_rename(&old, &new))
+}
+
+#[tauri::command(async)]
+fn section_move(id: String, name: String, to: usize) -> R<Layout> {
+    edit_layout(&id, |p| p.section_move(&name, to))
+}
+
+#[tauri::command(async)]
+fn section_delete(id: String, name: String) -> R<Layout> {
+    edit_layout(&id, |p| p.section_delete(&name))
+}
+
+#[tauri::command(async)]
+fn section_assign(
+    id: String,
+    mod_ids: Vec<String>,
+    name: Option<String>,
+    first: Option<bool>,
+) -> R<Layout> {
+    edit_layout(&id, |p| {
+        p.section_assign(&mod_ids, name.as_deref(), first == Some(true))
+    })
+}
+
+#[tauri::command(async)]
+fn profile_restore_layout(id: String, layout: Layout) -> R<()> {
     modify(&id, |p| {
-        if from >= p.mods.len() || to >= p.mods.len() {
-            return Err("posición fuera de la lista".into());
-        }
-        let m = p.mods.remove(from);
-        p.mods.insert(to, m);
+        p.restore_layout(layout);
         Ok(())
     })
+}
+
+#[tauri::command]
+async fn sections_from_categories(
+    app: AppHandle,
+    id: String,
+    names: std::collections::BTreeMap<String, String>,
+) -> R<Layout> {
+    in_thread(move || {
+        let e = app.state::<AppState>();
+        let vis = profile_mods(&e, &id)?;
+        let p = store()?.load(&id).map_err(err)?;
+        let resolved = conflicts::profile_entries(&p, &vis);
+        let list: Vec<(&str, bool, Option<&ScannedMod>)> = resolved
+            .iter()
+            .map(|x| (x.id.as_str(), x.enabled, x.found))
+            .collect();
+        let rules = pzmm_core::categories::user_rules();
+        let (_, info) = pzmm_core::categories::plan_order(&list, &rules, &p.accepted_overrides);
+        edit_layout(&id, |p| {
+            if !p.sections.is_empty() {
+                return Err("el perfil ya tiene secciones".into());
+            }
+            let prev = p.layout();
+            for m in &mut p.mods {
+                let key = info
+                    .get(&pzmm_core::modinfo::normalize_id(&m.id))
+                    .map_or("undefined", |i| i.category.key());
+                let name = names
+                    .get(key)
+                    .and_then(|n| pzmm_core::sections::clean_name(n))
+                    .unwrap_or_else(|| key.to_string());
+                if !p.sections.contains(&name) {
+                    p.sections.push(name.clone());
+                }
+                m.section = Some(name);
+            }
+            p.regroup();
+            Ok(prev)
+        })
+    })
+    .await
 }
 
 #[tauri::command]
@@ -741,12 +908,19 @@ async fn profile_add(
     id: String,
     keys: Vec<String>,
     enabled: Option<bool>,
+    section: Option<String>,
 ) -> R<()> {
     let enabled = enabled.unwrap_or(true);
     in_thread(move || {
         let e = app.state::<AppState>();
         let vis = visible_mods(&e, false)?;
         modify(&id, |p| {
+            let section = match section.as_deref() {
+                None => p.sections.last().cloned(),
+                Some("") => None,
+                Some(s) if p.sections.iter().any(|x| x == s) => Some(s.to_string()),
+                Some(_) => return Err("no existe esa sección".into()),
+            };
             for c in &keys {
                 let m = vis
                     .iter()
@@ -760,9 +934,11 @@ async fn profile_add(
                         id: mid,
                         enabled,
                         pinned: false,
+                        section: section.clone(),
                     }),
                 }
             }
+            p.regroup();
             Ok(())
         })
     })
@@ -864,6 +1040,7 @@ fn context<'a>(
             .map(|a| (a.loses.clone(), a.wins.clone()))
             .collect(),
         maps: p.maps.clone(),
+        sections: p.sections.clone(),
     }
 }
 
@@ -977,7 +1154,12 @@ fn profile_maps(id: String, maps: Vec<String>) -> R<()> {
 }
 
 #[tauri::command]
-async fn profile_sort(app: AppHandle, id: String, apply: bool) -> R<OrderProposal> {
+async fn profile_sort(
+    app: AppHandle,
+    id: String,
+    apply: bool,
+    section: Option<String>,
+) -> R<OrderProposal> {
     in_thread(move || {
         let e = app.state::<AppState>();
         let vis = profile_mods(&e, &id)?;
@@ -1000,25 +1182,25 @@ async fn profile_sort(app: AppHandle, id: String, apply: bool) -> R<OrderProposa
             .collect();
         let (options, info) =
             pzmm_core::categories::plan_order(&list, &rules, &p.accepted_overrides);
-        let mut r = order::sort_with(&entries, &options);
+        let section_of: Vec<usize> = p.mods.iter().map(|m| p.section_index(m)).collect();
+        let only = match &section {
+            Some(name) => Some(
+                p.sections
+                    .iter()
+                    .position(|s| s == name)
+                    .ok_or("no existe esa sección")?
+                    + 1,
+            ),
+            None => None,
+        };
+        let mut r = pzmm_core::sections::sort_sections(&entries, &options, &section_of, only);
         let version = version_of(&game(&e)?);
         conflicts::mark_winner_moves(&mut r, &resolved, &vis, version);
         let proposal = OrderProposal::of(&r, &info, rules.len());
         if apply {
             let _g = EDIT_LOCK.lock().unwrap_or_else(|e| e.into_inner());
             p = a.load(&id).map_err(err)?;
-            let mut reordered = Vec::with_capacity(p.mods.len());
-            for mid in &r.order {
-                if let Some(pos) = p
-                    .mods
-                    .iter()
-                    .position(|m| pzmm_core::modinfo::normalize_id(&m.id) == *mid)
-                {
-                    reordered.push(p.mods.remove(pos));
-                }
-            }
-            reordered.append(&mut p.mods);
-            p.mods = reordered;
+            pzmm_core::sections::apply_order(&mut p, &r.order);
             a.save(&p).map_err(err)?;
         }
         Ok(proposal)
@@ -2582,6 +2764,7 @@ fn duplicate_profile(id: &str, name: &str) -> R<Profile> {
     }
     let mut p = a.create(name).map_err(err)?;
     p.mods = origin.mods.clone();
+    p.sections = origin.sections.clone();
     p.maps = origin.maps.clone();
     p.launch = origin.launch.clone();
     p.zombiebuddy = origin.zombiebuddy.clone();
@@ -2641,9 +2824,11 @@ fn profile_share(id: String) -> R<String> {
                 workshop_id: workshop_of_key(&m.key),
                 enabled: m.enabled,
                 pinned: m.pinned,
+                section: m.section.clone(),
             })
             .collect(),
         maps: p.maps.clone(),
+        sections: p.sections.clone(),
         launch: profiles::LaunchSettings {
             xmx: p.launch.xmx.clone(),
             modfolders: p.launch.modfolders.clone(),
@@ -2717,8 +2902,11 @@ async fn profile_import(app: AppHandle, text: String) -> R<Imported> {
                 id: m.id.clone(),
                 enabled: m.enabled,
                 pinned: m.pinned,
+                section: m.section.clone(),
             });
         }
+        p.sections = c.sections.clone();
+        p.sanitize_sections();
         p.maps = c
             .maps
             .into_iter()
@@ -3251,6 +3439,17 @@ pub fn run() {
             profile_discard_game_list,
             profile_pin,
             profile_move,
+            section_create,
+            section_rename,
+            section_move,
+            section_delete,
+            section_assign,
+            sections_from_categories,
+            profile_restore_layout,
+            saves_gaps,
+            saves_add,
+            saves_restore,
+            saves_ignore,
             profile_add,
             profile_remove,
             profile_remove_many,

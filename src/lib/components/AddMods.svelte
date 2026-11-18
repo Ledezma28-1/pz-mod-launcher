@@ -20,6 +20,8 @@
   let search = $state('');
   let chosen = $state<Set<string>>(new Set());
   let set_enabled = $state(true);
+  const picked = app.view?.rows.find((r) => r.id === app.selection);
+  let section = $state(picked ? (picked.section ?? '') : (app.view?.sections.at(-1) ?? ''));
   let anchor = $state<number | null>(null);
   let field: HTMLInputElement | undefined = $state();
 
@@ -67,7 +69,7 @@
   async function add() {
     const keys = [...chosen];
     const id = v.id;
-    await app.run(() => api.add(id, keys, set_enabled), t(set_enabled ? 'add.done_on' : 'add.done_off', { n: keys.length }));
+    await app.run(() => api.add(id, keys, set_enabled, v.sections.length ? section : null), t(set_enabled ? 'add.done_on' : 'add.done_off', { n: keys.length }));
     close();
   }
 
@@ -113,6 +115,12 @@
       <button class="btn subtle" onclick={allVisible}>{list.every((m) => chosen.has(m.key)) ? t('add.none') : t('add.all', { n: list.length })}</button>
     {/if}
     <label class="checkbox"><input type="checkbox" bind:checked={set_enabled} />{t('add.set_enabled')}</label>
+    {#if v.sections.length > 0}
+      <select class="field section-pick" bind:value={section} aria-label={t('sections.move_to')}>
+        <option value="">{t('sections.none')}</option>
+        {#each v.sections as s (s)}<option value={s}>{s}</option>{/each}
+      </select>
+    {/if}
     <span class="gap"></span>
     <button class="btn subtle" onclick={() => app.openInWorkshop(null, false)}><Store size={14} strokeWidth={1.75} />{t('add.workshop')}</button>
     <button class="btn primary" disabled={chosen.size === 0 || app.taken} onclick={add}>
