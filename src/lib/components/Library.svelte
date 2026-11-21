@@ -8,14 +8,18 @@
   import Download from '@lucide/svelte/icons/download';
   import PackageX from '@lucide/svelte/icons/package-x';
   import X from '@lucide/svelte/icons/x';
+  import ArrowDown from '@lucide/svelte/icons/arrow-down';
+  import ArrowUp from '@lucide/svelte/icons/arrow-up';
   import { api, inTauri, message } from '../api';
   import { untrack } from 'svelte';
   import { app } from '../state.svelte';
-  import { t, kindText } from '../i18n.svelte';
+  import { t, kindText, i18n } from '../i18n.svelte';
   import { detailsCache } from '../steam.svelte';
   import type { LibraryMod, ModKind } from '../types';
 
   type SourceFilter = 'all' | 'workshop' | 'local';
+  type SortBy = 'name' | 'newest' | 'oldest';
+  const SORTS: SortBy[] = ['name', 'newest', 'oldest'];
 
   let mods = $state<LibraryMod[] | null>(null);
   let error = $state<string | null>(null);
@@ -23,6 +27,24 @@
   let kind = $state<ModKind | 'all'>('all');
   let source = $state<SourceFilter>('all');
   let onlyAct = $state(false);
+  let sortBy = $state<SortBy>(
+    (() => {
+      try {
+        const v = localStorage.getItem('biblioteca-orden') as SortBy;
+        return SORTS.includes(v) ? v : 'name';
+      } catch {
+        return 'name';
+      }
+    })(),
+  );
+  $effect(() => {
+    const v = sortBy;
+    try {
+      localStorage.setItem('biblioteca-orden', v);
+    } catch {
+    }
+  });
+  const dayFormat = $derived(new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' }));
   let chosen = $state<Set<string>>(new Set());
   let anchor = $state<number | null>(null);
   let target = $state<string | null>(app.profileId);
@@ -83,13 +105,16 @@
 
   const list = $derived.by(() => {
     const q = search.trim().toLowerCase();
-    return (mods ?? []).filter(
+    const shown = (mods ?? []).filter(
       (m) =>
         (kind === 'all' || m.kind === kind) &&
         (source === 'all' || m.source === source) &&
         (!onlyAct || m.pending) &&
         (!q || m.name.toLowerCase().includes(q) || (m.id ?? '').toLowerCase().includes(q) || (m.author ?? '').toLowerCase().includes(q)),
     );
+    if (sortBy === 'name') return shown;
+    const sign = sortBy === 'newest' ? -1 : 1;
+    return shown.sort((a, b) => (a.added === null ? 1 : 0) - (b.added === null ? 1 : 0) || sign * ((a.added ?? 0) - (b.added ?? 0)));
   });
 
   function mark(e: MouseEvent, i: number) {
@@ -201,6 +226,9 @@
       <option value="workshop">{t('lib.f_workshop')}</option>
       <option value="local">{t('lib.f_local')}</option>
     </select>
+    <select class="field" bind:value={sortBy} aria-label={t('lib.sort')}>
+      {#each SORTS as o (o)}<option value={o}>{t(`lib.sort_${o}`)}</option>{/each}
+    </select>
     <label class="checkbox">
       <input type="checkbox" bind:checked={onlyAct} />{t('lib.with_update')}
     </label>
@@ -249,7 +277,13 @@
       <div class="header">
         <span class="all"
           ><input type="checkbox" checked={allVisible} indeterminate={!allVisible && eligible.some((m) => chosen.has(m.key))} aria-label={t('lib.all_visible')} title={t('lib.all_visible')} onchange={toggleVisible} /></span
-        ><span>{t('table.name')}</span><span>{t('detail.author')}</span><span>{t('table.source')}</span><span>{t('table.kind')}</span><span>{t('table.version')}</span><span></span>
+        ><button class="sorter" class:on={sortBy === 'name'} title={t('lib.sort_name')} onclick={() => (sortBy = 'name')}>{t('table.name')}</button><span>{t('detail.author')}</span><span>{t('table.source')}</span><span>{t('table.kind')}</span><span>{t('table.version')}</span><button
+          class="sorter"
+          class:on={sortBy !== 'name'}
+          title={t(sortBy === 'newest' ? 'lib.sort_oldest' : 'lib.sort_newest')}
+          onclick={() => (sortBy = sortBy === 'newest' ? 'oldest' : 'newest')}
+          >{t('lib.added')}{#if sortBy === 'newest'}<ArrowDown size={12} strokeWidth={2} />{:else if sortBy === 'oldest'}<ArrowUp size={12} strokeWidth={2} />{/if}</button
+        ><span></span>
       </div>
       {#each list as m, i (m.key)}
         {@const inside = inProfile.has(m.key)}
@@ -264,13 +298,14 @@
           <span class="author">{m.author ?? ''}</span>
           <span class="origin">
             {#if m.pending}
-              <span class="new"><Download size={13} strokeWidth={2} />{t('lib.pending')}</span>
+              <span class="new" title={t('lib.pending')}><Download size={13} strokeWidth={2} /><span>{t('lib.pending')}</span></span>
             {:else}
               <span class:usual={m.source === 'workshop'}>{t(`source.${m.source}`)}</span>
             {/if}
           </span>
           <span class="tp" class:java={m.kind === 'java'}>{kindText(m.kind)}</span>
           <span class="mono show">{m.version_mod ?? ''}</span>
+          <span class="when num" title={m.added ? new Date(m.added * 1000).toLocaleString(i18n.language) : undefined}>{m.added ? dayFormat.format(m.added * 1000) : ''}</span>
           <span class="end">
             {#if m.workshop_id}
               <button class="btn subtle icon" title={t('lib.steam_remove')} aria-label={t('lib.steam_remove')} onclick={(e) => { stop(e); api.openWorkshop(m.workshop_id!); }}>
@@ -384,6 +419,8 @@
   .search {
     position: relative;
     display: flex;
+    flex: 1 1 150px;
+    max-width: 260px;
     align-items: center;
   }
   .search :global(svg) {
@@ -392,7 +429,7 @@
     color: var(--ink-3);
   }
   .search .field {
-    width: 260px;
+    width: 100%;
     padding-left: 28px;
   }
   .checkbox {
@@ -420,7 +457,7 @@
   .header,
   .row {
     display: grid;
-    grid-template-columns: 36px minmax(220px, 1fr) 160px 150px 80px 84px 44px;
+    grid-template-columns: 36px minmax(220px, 1fr) 160px 150px 80px 84px 104px 44px;
     align-items: center;
   }
   .header {
@@ -523,6 +560,7 @@
   }
   .author,
   .show,
+  .when,
   .origin {
     color: var(--ink-2);
     font-size: var(--t-s);
@@ -530,12 +568,39 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .origin {
+    padding-right: 8px;
+  }
   .new {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 4px;
+    min-width: 0;
     color: var(--ink);
     font-weight: 600;
+  }
+  .new > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .new :global(svg) {
+    flex: none;
+  }
+  .sorter {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    justify-self: start;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .sorter:hover,
+  .sorter.on {
+    color: var(--ink);
   }
   .tp {
     font-size: var(--t-xs);
@@ -570,7 +635,7 @@
   @container (max-width: 900px) {
     .header,
     .row {
-      grid-template-columns: 36px minmax(200px, 1fr) 150px 80px 84px 44px;
+      grid-template-columns: 36px minmax(200px, 1fr) 150px 80px 84px 104px 44px;
     }
     .header > :nth-child(3),
     .row > .author {

@@ -478,7 +478,8 @@ function detail(key: string): ModDetails {
   };
 }
 
-const library: LibraryMod[] = seeds.map(([id, name, kind, version, ws, author]) => ({
+const addedAt = (i: number) => Math.floor(Date.UTC(2026, 10, 20) / 1000) - (i < 6 ? i * 3 : 40 + (i % 5) * 17) * 86400;
+const library: LibraryMod[] = seeds.map(([id, name, kind, version, ws, author], i) => ({
   key: `ws:${ws}/${id}`,
   id,
   name,
@@ -489,6 +490,7 @@ const library: LibraryMod[] = seeds.map(([id, name, kind, version, ws, author]) 
   version_mod: version,
   error: null,
   pending: ws === 3619862853,
+  added: addedAt(i),
 }));
 const outsideOfProfile: [string, string, ModKind, string | null, number, string][] = [
   ['tsarslib', "Tsar's Common Library", 'lua', '2.1', 2392709985, 'Tsar'],
@@ -497,7 +499,7 @@ const outsideOfProfile: [string, string, ModKind, string | null, number, string]
   ['AuthenticZLite', 'Authentic Z - Lite', 'lua', '1.0', 2335368829, 'Authentic Peach'],
 ];
 for (const [id, name, kind, version, ws, author] of outsideOfProfile) {
-  library.push({ key: `ws:${ws}/${id}`, id, name, author, source: 'workshop', workshop_id: ws, kind, version_mod: version, error: null, pending: false });
+  library.push({ key: `ws:${ws}/${id}`, id, name, author, source: 'workshop', workshop_id: ws, kind, version_mod: version, error: null, pending: false, added: addedAt(library.length) });
 }
 
 const wsState = (id: number, subscribed: boolean) => ({ id, subscribed, installed: subscribed, update: false, downloading: false, downloaded: 0, total: 0 });

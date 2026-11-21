@@ -237,6 +237,7 @@ export interface LibraryMod {
   version_mod: string | null;
   error: string | null;
   pending: boolean;
+  added: number | null;
 }
 
 export interface ModDetails {

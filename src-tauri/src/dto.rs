@@ -416,6 +416,7 @@ pub struct LibraryMod {
     pub version_mod: Option<String>,
     pub error: Option<String>,
     pub pending: bool,
+    pub added: Option<i64>,
 }
 
 impl LibraryMod {
@@ -436,6 +437,11 @@ impl LibraryMod {
             version_mod: info.and_then(|i| i.version_mod.clone()),
             error: m.error.clone(),
             pending: workshop_id.is_some_and(|id| pending_ids.contains(&id)),
+            added: std::fs::metadata(&m.folder)
+                .and_then(|d| d.created())
+                .ok()
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| d.as_secs() as i64),
         }
     }
 }
