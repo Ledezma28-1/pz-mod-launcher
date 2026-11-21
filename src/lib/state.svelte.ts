@@ -11,7 +11,7 @@ import type { Layout, SaveGap, SteamProfile, AppSettingsData, BisectAnswer, Bise
 export const ZB_IDS: Record<Channel, number> = { estable: 3619862853, beta: 3812624292 };
 
 export type Screen = 'home' | 'help' | 'profile' | 'library' | 'workshop' | 'zb' | 'install' | 'settings';
-export type Tab = 'order' | 'conflicts' | 'export' | 'sandbox' | 'console' | 'settings';
+export type Tab = 'order' | 'conflicts' | 'maps' | 'export' | 'sandbox' | 'console' | 'settings';
 export type Theme = 'system' | 'light' | 'dark';
 const STORED_THEME: Record<Theme, string> = { system: 'sistema', light: 'claro', dark: 'oscuro' };
 

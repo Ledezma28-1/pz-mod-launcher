@@ -9,7 +9,7 @@ use pzmm_core::profiles::{self, ModEntry, ProfileStore};
 use pzmm_core::version::Version;
 use pzmm_core::{PZ_APP_ID, backups, conflicts, integrity, launch, order, steam, zb};
 
-const USAGE: &str = "uso: pzmm-cli env | scan | profile create|list|mods|import | cmdline <id> | launch <id> | zb status|install|uninstall | backup restore | order | conflicts | predict <id> <console.txt> | patches [<id>] [--zb <v>] | probe <id> [--on|--off] | export | sandbox | workshop | console | integrity";
+const USAGE: &str = "uso: pzmm-cli env | scan | profile create|list|mods|import | cmdline <id> | launch <id> | zb status|install|uninstall | backup restore | order | conflicts | predict <id> <console.txt> | patches [<id>] [--zb <v>] | probe <id> [--on|--off] | maps <id> | lotpack <folder> <x> <y> [<folder2>] | export | sandbox | workshop | console | integrity";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -28,6 +28,8 @@ fn main() -> ExitCode {
         Some("predict") => predict_cli(rest),
         Some("patches") => patches_cli(rest),
         Some("probe") => probe_cli(rest),
+        Some("lotpack") => lotpack_cli(rest),
+        Some("maps") => maps_cli(rest),
         Some("workshop") => workshop_cli(rest),
         Some("export") => export_cli(rest),
         Some("sandbox") => sandbox_cli(rest),
@@ -674,15 +676,7 @@ fn order_cli(args: &[String]) -> pzmm_core::CoreResult<()> {
     let j = game::detect()?;
     let vis = scan_for(&j, &a.cache(&p.id));
     let resolved = resolve_entries(&p, &vis);
-    let entries: Vec<order::Entry> = resolved
-        .iter()
-        .map(|e| order::Entry {
-            id: e.id.clone(),
-            enabled: e.enabled,
-            pinned: e.pinned,
-            info: e.found.and_then(|m| m.info.as_ref()),
-        })
-        .collect();
+    let entries: Vec<order::Entry> = resolved.iter().map(|e| e.order_entry()).collect();
     let before: Vec<String> = p
         .mods
         .iter()
@@ -790,6 +784,89 @@ fn order_cli(args: &[String]) -> pzmm_core::CoreResult<()> {
     Ok(())
 }
 
+fn maps_cli(args: &[String]) -> pzmm_core::CoreResult<()> {
+    use pzmm_core::maps;
+    let id = args.first().ok_or_else(|| missing("el id del perfil"))?;
+    let a = store(args)?;
+    let p = a.load(id)?;
+    let j = game::detect()?;
+    let vis = scan_for(&j, &a.cache(&p.id));
+    let resolved = resolve_entries(&p, &vis);
+    let t0 = std::time::Instant::now();
+    let all: Vec<maps::MapEntry> = maps::dedupe_folders(
+        resolved
+            .iter()
+            .filter(|e| e.enabled)
+            .filter_map(|e| e.found)
+            .flat_map(maps::entries)
+            .collect(),
+    );
+    let detected: Vec<String> = all.iter().map(|m| m.folder.clone()).collect();
+    let order = profiles::order_maps(&p.maps, &detected);
+    let media = game::media_index(&j.folder);
+    let vanilla = maps::vanilla_cells(&media);
+    let urban = maps::game_urban(&j.folder).unwrap_or_default();
+    let refs: Vec<&maps::MapEntry> = all.iter().collect();
+    let cells = maps::cells_of(&order, &refs, &vanilla, &urban);
+    for (i, folder) in order.iter().enumerate() {
+        let Some(m) = all.iter().find(|m| m.folder == *folder) else {
+            println!("{:>3}. {folder}", i + 1);
+            continue;
+        };
+        let near: Vec<_> = m.cells.iter().filter(|c| urban.touches(**c)).collect();
+        let town: Vec<Option<u32>> = near
+            .iter()
+            .map(|c| maps::town_squares(m, **c, &urban))
+            .collect();
+        println!(
+            "{:>3}. {folder} ({} celdas, {} junto a un pueblo, casillas de pueblo {town:?})",
+            i + 1,
+            m.cells.len(),
+            near.len()
+        );
+    }
+    println!(
+        "{} celdas · vanilla {} · urbanas {} · {} ms",
+        cells.len(),
+        vanilla.len(),
+        urban.cells().count(),
+        t0.elapsed().as_millis()
+    );
+    for c in cells.iter().filter(|c| c.state != maps::CellState::Free) {
+        println!(
+            "  {}_{} {:?}: {}",
+            c.cell.0,
+            c.cell.1,
+            c.state,
+            c.maps.join(" > ")
+        );
+    }
+    Ok(())
+}
+
+fn lotpack_cli(args: &[String]) -> pzmm_core::CoreResult<()> {
+    let missing =
+        || pzmm_core::Error::NotFound("uso: lotpack <carpeta> <x> <y> [<carpeta2>]".into());
+    let (Some(dir), Some(x), Some(y)) = (args.first(), args.get(1), args.get(2)) else {
+        return Err(missing());
+    };
+    let cover = |d: &str| {
+        let d = PathBuf::from(d);
+        pzmm_core::lotpack::coverage(
+            &d.join(format!("{x}_{y}.lotheader")),
+            &d.join(format!("world_{x}_{y}.lotpack")),
+        )
+    };
+    let a = cover(dir)?;
+    println!("ocupadas {} de 65536", a.count());
+    if let Some(other) = args.get(3) {
+        let b = cover(other)?;
+        println!("segunda: ocupadas {} de 65536", b.count());
+        println!("en común {}", a.overlap(&b));
+    }
+    Ok(())
+}
+
 fn patches_cli(args: &[String]) -> pzmm_core::CoreResult<()> {
     let j = game::detect()?;
     let vis = scan_mods(&j);
@@ -865,6 +942,7 @@ fn context_of<'a>(
             .collect(),
         maps: p.maps.clone(),
         sections: p.sections.clone(),
+        urban: pzmm_core::maps::game_urban(&j.folder),
     }
 }
 

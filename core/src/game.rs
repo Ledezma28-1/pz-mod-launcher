@@ -297,6 +297,7 @@ pub fn modifications(folder: &Path) -> Vec<Modification> {
 
 pub fn media_index(folder: &Path) -> std::collections::BTreeSet<String> {
     crate::conflicts::forget_game_files();
+    crate::maps::forget_game();
     let media = folder.join("media");
     walkdir::WalkDir::new(&media)
         .into_iter()

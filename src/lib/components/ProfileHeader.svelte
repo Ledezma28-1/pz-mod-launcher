@@ -24,6 +24,7 @@
   const tabs: { id: Tab; key: Parameters<typeof t>[0] }[] = [
     { id: 'order', key: 'profile.tab.order' },
     { id: 'conflicts', key: 'profile.tab.conflicts' },
+    { id: 'maps', key: 'profile.tab.maps' },
     { id: 'export', key: 'profile.tab.export' },
     { id: 'sandbox', key: 'profile.tab.sandbox' },
     { id: 'console', key: 'profile.tab.console' },

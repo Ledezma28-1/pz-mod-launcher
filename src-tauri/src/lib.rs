@@ -1,5 +1,6 @@
 mod dto;
 mod logging;
+mod maps_view;
 
 use std::path::PathBuf;
 use std::process::Child;
@@ -35,6 +36,7 @@ struct AppState {
     counts: Mutex<std::collections::HashMap<String, (SignatureCount, Count)>>,
     settings: Mutex<AppSettings>,
     last_scan: Mutex<Option<LastScan>>,
+    map_sources: Mutex<std::collections::HashMap<String, PathBuf>>,
 }
 
 struct LastScan {
@@ -877,6 +879,8 @@ async fn sections_from_categories(
             .collect();
         let rules = pzmm_core::categories::user_rules();
         let (_, info) = pzmm_core::categories::plan_order(&list, &rules, &p.accepted_overrides);
+        let entries: Vec<_> = resolved.iter().map(|x| x.order_entry()).collect();
+        let edges = pzmm_core::order::edges(&entries);
         edit_layout(&id, |p| {
             if !p.sections.is_empty() {
                 return Err("el perfil ya tiene secciones".into());
@@ -896,6 +900,7 @@ async fn sections_from_categories(
                 m.section = Some(name);
             }
             p.regroup();
+            p.pull_requirements(&edges);
             Ok(prev)
         })
     })
@@ -1041,6 +1046,7 @@ fn context<'a>(
             .collect(),
         maps: p.maps.clone(),
         sections: p.sections.clone(),
+        urban: pzmm_core::maps::game_urban(&j.folder),
     }
 }
 
@@ -1138,8 +1144,30 @@ async fn profile_export(app: AppHandle, id: String) -> R<Export> {
     .await
 }
 
+#[tauri::command]
+async fn profile_maps_view(app: AppHandle, id: String, language: String) -> R<maps_view::MapsView> {
+    in_thread(move || {
+        let e = app.state::<AppState>();
+        let j = game(&e)?;
+        let media = game_media(&e)?;
+        let vis = profile_mods(&e, &id)?;
+        let p = store()?.load(&id).map_err(err)?;
+        let resolved = conflicts::profile_entries(&p, &vis);
+        Ok(maps_view::build(
+            &j.folder,
+            &media,
+            &vis,
+            &p,
+            &resolved,
+            &language,
+            &e.map_sources,
+        ))
+    })
+    .await
+}
+
 #[tauri::command(async)]
-fn profile_maps(id: String, maps: Vec<String>) -> R<()> {
+fn profile_maps(id: String, maps: Vec<String>, server_excluded: Vec<String>) -> R<()> {
     modify(&id, |p| {
         let mut m: Vec<String> = maps
             .into_iter()
@@ -1149,6 +1177,10 @@ fn profile_maps(id: String, maps: Vec<String>) -> R<()> {
         m.dedup();
         m.push(profiles::BASE_MAP.to_string());
         p.maps = m;
+        p.server_excluded_maps = server_excluded
+            .into_iter()
+            .filter(|x| profiles::is_valid_map(x) && x != profiles::BASE_MAP)
+            .collect();
         Ok(())
     })
 }
@@ -1166,15 +1198,7 @@ async fn profile_sort(
         let a = store()?;
         let mut p = a.load(&id).map_err(err)?;
         let resolved = conflicts::profile_entries(&p, &vis);
-        let entries: Vec<order::Entry> = resolved
-            .iter()
-            .map(|x| order::Entry {
-                id: x.id.clone(),
-                enabled: x.enabled,
-                pinned: x.pinned,
-                info: x.found.and_then(|m| m.info.as_ref()),
-            })
-            .collect();
+        let entries: Vec<order::Entry> = resolved.iter().map(|x| x.order_entry()).collect();
         let rules = pzmm_core::categories::user_rules();
         let list: Vec<(&str, bool, Option<&ScannedMod>)> = resolved
             .iter()
@@ -1252,6 +1276,7 @@ fn changed_mods(app: &AppHandle) {
         *lock(&e.sandbox) = None;
         lock(&e.counts).clear();
     }
+    pzmm_core::maps::forget();
     let _ = app.emit("mods-changed", ());
 }
 
@@ -2766,6 +2791,7 @@ fn duplicate_profile(id: &str, name: &str) -> R<Profile> {
     p.mods = origin.mods.clone();
     p.sections = origin.sections.clone();
     p.maps = origin.maps.clone();
+    p.server_excluded_maps = origin.server_excluded_maps.clone();
     p.launch = origin.launch.clone();
     p.zombiebuddy = origin.zombiebuddy.clone();
     let copy = || -> R<()> {
@@ -2829,6 +2855,7 @@ fn profile_share(id: String) -> R<String> {
             .collect(),
         maps: p.maps.clone(),
         sections: p.sections.clone(),
+        server_excluded_maps: p.server_excluded_maps.clone(),
         launch: profiles::LaunchSettings {
             xmx: p.launch.xmx.clone(),
             modfolders: p.launch.modfolders.clone(),
@@ -2911,6 +2938,11 @@ async fn profile_import(app: AppHandle, text: String) -> R<Imported> {
             .maps
             .into_iter()
             .filter(|m| profiles::is_valid_map(m))
+            .collect();
+        p.server_excluded_maps = c
+            .server_excluded_maps
+            .into_iter()
+            .filter(|m| profiles::is_valid_map(m) && m != profiles::BASE_MAP)
             .collect();
         let (launch, ignored) = c.launch.from_foreign();
         p.launch = launch;
@@ -3173,7 +3205,13 @@ fn server_with_profile(
     );
     srv.insert(
         "Map".into(),
-        Value::Text(join(x.maps.iter().map(|m| m.folder.clone()).collect())),
+        Value::Text(join(
+            x.maps
+                .iter()
+                .filter(|m| m.server)
+                .map(|m| m.folder.clone())
+                .collect(),
+        )),
     );
     let mut list = String::from("# Puesto\tMod ID\tWorkshop ID\tNombre\r\n");
     for (i, m) in active.iter().enumerate() {
@@ -3411,6 +3449,27 @@ pub fn run() {
             tauri::WindowEvent::Resized(_) => sync_webview_visibility(window),
             _ => {}
         })
+        .register_asynchronous_uri_scheme_protocol("pzmap", |ctx, request, responder| {
+            let app = ctx.app_handle().clone();
+            let path = request.uri().path().to_string();
+            std::thread::spawn(move || {
+                let body = app
+                    .try_state::<AppState>()
+                    .and_then(|e| maps_view::serve(&e.map_sources, &path));
+                let response = match body {
+                    Some(b) => tauri::http::Response::builder()
+                        .header("Content-Type", "image/png")
+                        .header("Cache-Control", "max-age=3600")
+                        .body(b),
+                    None => tauri::http::Response::builder()
+                        .status(404)
+                        .body(Vec::new()),
+                };
+                if let Ok(r) = response {
+                    responder.respond(r);
+                }
+            });
+        })
         .setup(|app| {
             watch_mods(app.handle().clone());
             watch_steam(app.handle().clone());
@@ -3482,6 +3541,7 @@ pub fn run() {
             featured_read,
             featured_refresh,
             profile_maps,
+            profile_maps_view,
             library,
             mod_details,
             launch,

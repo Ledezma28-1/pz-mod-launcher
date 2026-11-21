@@ -36,6 +36,7 @@ const EN: [RegExp, string][] = [
   [/^nombre de sección no válido$/, 'Invalid section name (1 to 60 characters)'],
   [/^ya hay una sección con ese nombre$/, 'There’s already a section with that name'],
   [/^no existe esa sección$/, 'That section doesn’t exist'],
+  [/^archivo de mapa no válido: (.+)$/, 'Invalid map file: $1'],
   [/^el perfil ya tiene secciones$/, 'The profile already has sections'],
   [/^sin carpeta de usuario$/, 'No user folder'],
   [/^solo se abren enlaces web \(http o https\)$/, 'Only web links (http or https) are opened'],

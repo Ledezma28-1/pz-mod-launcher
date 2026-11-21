@@ -36,6 +36,12 @@
   --warn: #6b4f0e;
   --warn-soft: #f4eacf;
   --ok: #335f30;
+  --map-1: #2a6fb5;
+  --map-2: #a3442f;
+  --map-3: #1c8a6e;
+  --map-4: #7b4fb8;
+  --map-5: #5e7d1e;
+  --map-6: #b5457e;
 
   --thread: #1f4f7a;
   --thread-dependent: #56738f;
@@ -89,6 +95,12 @@
     --warn: #d9ab52;
     --warn-soft: #382e1c;
     --ok: #8fbf86;
+    --map-1: #4a8ad0;
+    --map-2: #d86a4c;
+    --map-3: #239a78;
+    --map-4: #9677d8;
+    --map-5: #759a33;
+    --map-6: #cf6c9f;
 
     --thread: #7eaad8;
     --thread-dependent: #5f7e9c;
@@ -128,6 +140,12 @@
   --warn: #d9ab52;
   --warn-soft: #382e1c;
   --ok: #8fbf86;
+  --map-1: #4a8ad0;
+  --map-2: #d86a4c;
+  --map-3: #239a78;
+  --map-4: #9677d8;
+  --map-5: #759a33;
+  --map-6: #cf6c9f;
 
   --thread: #7eaad8;
   --thread-dependent: #5f7e9c;

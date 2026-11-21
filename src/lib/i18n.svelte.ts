@@ -123,7 +123,7 @@ const es = {
   'help.diagnosis.p2': "Si no está claro qué mod es, «Buscar el culpable» crea una copia del perfil y prueba partes de la lista, empezando por los mods sospechosos: los que aparecen en el fallo, los que dan errores y los que cambiaron desde la última partida buena. Juegas cada ronda y, al cerrar el juego, la app propone la respuesta: «Sigue fallando», «Ya no falla» o «Falló por otra cosa» si falló de otra forma. Tú la confirmas. Antes de culpar a un mod comprueba que falla con él solo y que no falla sin él. Si ninguno falla por sí solo, busca los que fallan juntos. Marca «El fallo no sale siempre» si a veces el juego aguanta sin cambios. Puedes deshacer la última respuesta o cancelar, y «Terminar» manda la copia a la Papelera. Tu perfil y tus partidas no se tocan.",
   'help.server.t': "Servidor y sandbox",
   'help.server.p1': "La pestaña «Servidor y sandbox» del perfil edita las opciones del servidor y de sandbox, las del juego y las de los mods activos. Puedes partir de los valores por defecto, de un preset o de un servidor del perfil. Al guardar escribe solo en la carpeta del perfil (`Server\\<nombre>.ini` y `<nombre>_SandboxVars.lua`, o `Sandbox Presets\\<nombre>.cfg`) y deja lo anterior como `.bak`. Las partidas que ya existen no cambian.",
-  'help.server.p2': "La pestaña Exportar tiene las líneas `Mods=`, `WorkshopItems=` y `Map=` con los mods activos en el orden del perfil, para pegarlas en el `.ini` de un servidor, y el orden de los mapas, que se guarda en el perfil. «Copiar» en el editor da los mismos textos sin escribir ningún archivo.",
+  'help.server.p2': "La pestaña Exportar tiene las líneas `Mods=`, `WorkshopItems=` y `Map=` con los mods activos en el orden del perfil, para pegarlas en el `.ini` de un servidor. El orden de los mapas y cuáles van en el servidor se eligen en la pestaña Mapas. «Copiar» en el editor da los mismos textos sin escribir ningún archivo.",
   'help.share.t': "Compartir un perfil",
   'help.share.p1': "En la pestaña Exportar, «Guardar como archivo» crea un `.pzprofile` en tu carpeta Descargas. Quien lo abra con «Importar perfil», en Inicio, tendrá la misma lista y el mismo orden, y el launcher le ofrecerá suscribirse a los mods del Workshop que le falten. De los ajustes de arranque solo viaja la memoria; los de ZombieBuddy se quedan en tu PC.",
   'help.backups.t': "Copias de seguridad",
@@ -482,6 +482,81 @@ const es = {
   'export.copied': 'Copiado: {q}',
   'export.not_copied': 'No se pudo copiar al portapapeles.',
   'export.maps': 'Orden de los mapas',
+  'profile.tab.maps': 'Mapas',
+  'maps.loading': 'Leyendo los mapas…',
+  'maps.profile': 'Mapas del perfil',
+  'maps.profile_text': 'El juego carga todos estos. Donde dos ocupan la misma casilla, manda el que va antes.',
+  'maps.none': 'Este perfil no tiene mapas de mods.',
+  'maps.base': 'Mapa base del juego',
+  'maps.server': 'En el servidor',
+  'maps.server_hint': 'Solo cambia la línea Map= del servidor. En un jugador el juego carga todos los mapas de los mods activos.',
+  'maps.cells': '{n} celdas',
+  'maps.cells_one': '1 celda',
+  'maps.spawn_only': 'solo puntos de aparición',
+  'maps.clash': 'Se pisa con otro mapa',
+  'maps.map_line': 'Línea Map= del servidor',
+  'maps.to_export': 'Ir a Exportar',
+  'maps.candidates': 'Mapas instalados sin activar',
+  'maps.candidates_none': 'No hay más mapas instalados.',
+  'maps.candidates_none_compatible': 'Todos se pisan con algún mapa del perfil.',
+  'maps.filter_none': 'Ninguno tiene esta celda.',
+  'maps.only_compatible': 'Solo los que no se pisan',
+  'maps.add_compatible': 'Activar los que no se pisan',
+  'maps.preview': 'Ver «{m}» en el mapa',
+  'maps.enable': 'Activar',
+  'maps.disable': 'Desactivar',
+  'maps.disable_title': 'Desactivar «{m}» (vuelve a los mapas sin activar)',
+  'maps.disable_many': 'Desactivar el mod «{mod}» y sus {n} mapas',
+  'maps.disabled_one': 'Desactivado: {m}.',
+  'maps.compatible': 'no se pisa',
+  'maps.incompatible': 'se pisa',
+  'maps.enabled_one': 'Activado: {m}.',
+  'maps.enabled_many': 'Mapas activados: {n}.',
+  'maps.order_saved': 'Orden de mapas guardado.',
+  'maps.order_auto': 'Orden automático',
+  'maps.order_auto_done': 'Los mapas vuelven al orden automático.',
+  'maps.server_out': '«{m}» ya no va en el servidor.',
+  'maps.server_in': '«{m}» vuelve al servidor.',
+  'maps.filter_cell': 'Celda {x},{y}',
+  'maps.filter_clear': 'Quitar el filtro de celda',
+  'maps.canvas': 'Mapa del mundo. Flechas: cambiar de celda. Intro: elegirla. Más y menos: zoom. Cero: ver todo. Escape: quitar el filtro.',
+  'maps.cell_base': 'Celda {x},{y}: solo el mapa del juego.',
+  'maps.cell_maps': 'Celda {x},{y}: {m}.',
+  'maps.cell_shared': 'ocupan {n} casillas a la vez y manda el primero',
+  'maps.cell_unknown': 'no se pudo medir si se pisan',
+  'maps.cell_touching': 'comparten la celda sin pisarse',
+  'maps.cell_urban': 'ocupa casillas de un pueblo del juego',
+  'maps.layer_game': 'Mapa del juego',
+  'maps.layer_spawns': 'Puntos de aparición',
+  'maps.layer_towns': 'Zonas urbanas',
+  'maps.fill': 'Relleno',
+  'maps.fill_hint': 'Cuánto tapan los mapas de mods la imagen del juego. Al mínimo solo se ven los bordes.',
+  'maps.fill_none': 'solo bordes',
+  'maps.goto': 'Ir a…',
+  'maps.goto_label': 'Ir a un pueblo o un mapa',
+  'maps.goto_none': 'Ningún pueblo ni mapa coincide con «{q}».',
+  'maps.tip_base': 'Solo el mapa del juego',
+  'maps.zoom_in': 'Acercar',
+  'maps.zoom_out': 'Alejar',
+  'maps.fit': 'Ver todo',
+  'maps.legend_map': 'Mapa de mod',
+  'maps.legend_shared': 'Casillas pisadas',
+  'maps.legend_preview': 'Vista previa',
+  'maps.col_server': 'Servidor',
+  'maps.col_map': 'Mapa',
+  'maps.col_order': 'Orden',
+  'maps.col_show': 'Ver',
+  'maps.legend': 'Leyenda',
+  'maps.detail_folder': 'Carpeta',
+  'maps.detail_cells': 'Celdas',
+  'maps.detail_spawns': 'Puntos de aparición',
+  'maps.detail_requires': 'Requisitos',
+  'maps.detail_clashes': 'Se pisa con',
+  'maps.detail_workshop': 'Ver en el Workshop',
+  'maps.detail_cell_maps': 'Mapas en esta celda (manda el primero)',
+  'maps.demo': 'Datos de ejemplo: sin la imagen del mapa del juego.',
+  'export.maps_moved': 'El orden de los mapas y cuáles van en el servidor se cambian en la pestaña Mapas.',
+  'export.maps_open': 'Abrir Mapas',
   'export.maps_text_auto': 'Mapas que traen los mods activos, en el orden de carga. Muévelos con las flechas: el orden se guarda en el perfil y se usa en Map= y en default.txt.',
   'export.maps_saved_text': 'Orden guardado en el perfil (Map= y default.txt). Los mapas nuevos que traigan otros mods van detrás.',
   'export.maps_auto': 'Volver al orden automático',
@@ -1045,7 +1120,7 @@ const en: Record<Key, string> = {
   'help.diagnosis.p2': "If it’s not clear which mod it is, “Find the culprit” makes a copy of the profile and tries parts of the list, starting with the suspect mods: the ones that show up in the crash, the ones with errors and the ones that changed since the last good session. You play each round and, once the game closes, the app suggests the answer: “Still fails”, “No longer fails”, or “Failed for another reason” if it failed in a different way. You confirm it. Before blaming a mod it checks that the game fails with only that mod and works without it. If no mod fails on its own, it looks for the ones that fail together. Tick “The failure does not always show up” if the game sometimes holds up without changes. You can undo the last answer or cancel, and “Finish” sends the copy to the Recycle Bin. Your profile and your saves are left alone.",
   'help.server.t': "Server and sandbox",
   'help.server.p1': "The profile’s “Server & sandbox” tab edits the server and sandbox options, the game’s and those of the enabled mods. You can start from the defaults, a preset or one of the profile’s servers. Saving writes only to the profile folder (`Server\\<name>.ini` and `<name>_SandboxVars.lua`, or `Sandbox Presets\\<name>.cfg`) and keeps what was there as `.bak`. Existing saves don’t change.",
-  'help.server.p2': "The Export tab has the `Mods=`, `WorkshopItems=` and `Map=` lines with the enabled mods in the profile’s order, to paste into a server’s `.ini`, and the map order, which is saved in the profile. “Copy” in the editor gives the same texts without writing any file.",
+  'help.server.p2': "The Export tab has the `Mods=`, `WorkshopItems=` and `Map=` lines with the enabled mods in the profile’s order, to paste into a server’s `.ini`. The map order and which maps go on the server are set in the Maps tab. “Copy” in the editor gives the same texts without writing any file.",
   'help.share.t': "Sharing a profile",
   'help.share.p1': "On the Export tab, “Save as file” creates a `.pzprofile` in your Downloads folder. Whoever opens it with “Import profile”, on Home, gets the same list and order, and the launcher offers to subscribe to the Workshop mods they’re missing. Of the launch settings only the memory travels; ZombieBuddy settings stay on your PC.",
   'help.backups.t': "Backups",
@@ -1404,6 +1479,81 @@ const en: Record<Key, string> = {
   'export.copied': 'Copied: {q}',
   'export.not_copied': 'Couldn’t copy to the clipboard.',
   'export.maps': 'Map order',
+  'profile.tab.maps': 'Maps',
+  'maps.loading': 'Reading the maps…',
+  'maps.profile': 'Profile maps',
+  'maps.profile_text': 'The game loads all of these. Where two fill the same square, the one higher up wins.',
+  'maps.none': 'This profile has no mod maps.',
+  'maps.base': 'Base game map',
+  'maps.server': 'On the server',
+  'maps.server_hint': 'Only changes the server\'s Map= line. In single player the game loads every map of the enabled mods.',
+  'maps.cells': '{n} cells',
+  'maps.cells_one': '1 cell',
+  'maps.spawn_only': 'spawn points only',
+  'maps.clash': 'Overlaps another map',
+  'maps.map_line': 'Server Map= line',
+  'maps.to_export': 'Go to Export',
+  'maps.candidates': 'Installed maps not enabled',
+  'maps.candidates_none': 'No other maps installed.',
+  'maps.candidates_none_compatible': 'All of them overlap a map in the profile.',
+  'maps.filter_none': 'None of them has this cell.',
+  'maps.only_compatible': 'Only ones that don\'t overlap',
+  'maps.add_compatible': 'Enable the ones that don\'t overlap',
+  'maps.preview': 'Show “{m}” on the map',
+  'maps.enable': 'Enable',
+  'maps.disable': 'Disable',
+  'maps.disable_title': 'Disable “{m}” (it goes back to the maps not enabled)',
+  'maps.disable_many': 'Disable the mod “{mod}” and its {n} maps',
+  'maps.disabled_one': 'Disabled: {m}.',
+  'maps.compatible': 'no overlap',
+  'maps.incompatible': 'overlaps',
+  'maps.enabled_one': 'Enabled: {m}.',
+  'maps.enabled_many': 'Maps enabled: {n}.',
+  'maps.order_saved': 'Map order saved.',
+  'maps.order_auto': 'Automatic order',
+  'maps.order_auto_done': 'Maps are back in automatic order.',
+  'maps.server_out': '“{m}” is no longer on the server.',
+  'maps.server_in': '“{m}” is back on the server.',
+  'maps.filter_cell': 'Cell {x},{y}',
+  'maps.filter_clear': 'Clear the cell filter',
+  'maps.canvas': 'World map. Arrows: move between cells. Enter: pick one. Plus and minus: zoom. Zero: show all. Escape: clear the filter.',
+  'maps.cell_base': 'Cell {x},{y}: base game map only.',
+  'maps.cell_maps': 'Cell {x},{y}: {m}.',
+  'maps.cell_shared': 'they fill {n} of the same squares and the first one wins',
+  'maps.cell_unknown': 'couldn\'t measure whether they overlap',
+  'maps.cell_touching': 'they share the cell without overlapping',
+  'maps.cell_urban': 'fills squares of a base game town',
+  'maps.layer_game': 'Game map',
+  'maps.layer_spawns': 'Spawn points',
+  'maps.layer_towns': 'Towns',
+  'maps.fill': 'Fill',
+  'maps.fill_hint': 'How much the mod maps cover the game image. At zero, only the outlines show.',
+  'maps.fill_none': 'outlines only',
+  'maps.goto': 'Go to…',
+  'maps.goto_label': 'Go to a town or map',
+  'maps.goto_none': 'No town or map matches “{q}”.',
+  'maps.tip_base': 'Base game map only',
+  'maps.zoom_in': 'Zoom in',
+  'maps.zoom_out': 'Zoom out',
+  'maps.fit': 'Show all',
+  'maps.legend_map': 'Mod map',
+  'maps.legend_shared': 'Overlapping squares',
+  'maps.legend_preview': 'Preview',
+  'maps.col_server': 'Server',
+  'maps.col_map': 'Map',
+  'maps.col_order': 'Order',
+  'maps.col_show': 'Show',
+  'maps.legend': 'Legend',
+  'maps.detail_folder': 'Folder',
+  'maps.detail_cells': 'Cells',
+  'maps.detail_spawns': 'Spawn points',
+  'maps.detail_requires': 'Requires',
+  'maps.detail_clashes': 'Overlaps with',
+  'maps.detail_workshop': 'View on the Workshop',
+  'maps.detail_cell_maps': 'Maps in this cell (the first one wins)',
+  'maps.demo': 'Sample data: without the game map image.',
+  'export.maps_moved': 'Map order and which maps go on the server are set in the Maps tab.',
+  'export.maps_open': 'Open Maps',
   'export.maps_text_auto': 'Maps from the enabled mods, in load order. Move them with the arrows: the order is saved in the profile and used in Map= and default.txt.',
   'export.maps_saved_text': 'Order saved in the profile (Map= and default.txt). New maps from other mods go after.',
   'export.maps_auto': 'Back to automatic order',
@@ -1978,7 +2128,9 @@ export function findingCause(h: Finding, id: string): string {
           : en ? `${x.total} script object(s)` : `${x.total} objeto(s) de script`
         : en ? 'identical scripts' : 'scripts idénticos';
     case 'MapCellsShared':
-      return en ? 'shares map cells' : 'comparte celdas';
+      return x.squares === 0 ? (en ? 'map cells, no overlap' : 'celdas sin pisarse') : en ? 'overlapping maps' : 'mapas que se pisan';
+    case 'MapOverTown':
+      return en ? 'map over a town' : 'mapa sobre un pueblo';
     case 'ZbNotInstalled':
       return en ? 'needs ZombieBuddy' : 'falta ZombieBuddy';
     case 'ZbVersion': {
@@ -2213,10 +2365,25 @@ export function findingText(h: Finding): string {
         ? `${m} define ${x.total} script object(s) with the same name and different content (${list}). “${x.wins}”’s properties win because its file comes later by name; the mod order doesn’t change it.${props}${same}${why}`
         : `${m} definen ${x.total} objeto(s) de script con el mismo nombre y distinto contenido (${list}). Mandan las propiedades de «${x.wins}» porque su archivo va después por nombre; el orden de mods no lo cambia.${props}${same}${why}`;
     }
-    case 'MapCellsShared':
+    case 'MapCellsShared': {
+      const [a, b] = x.maps;
+      const s = x.sample.join(', ');
+      if (x.squares === 0)
+        return inEnglish
+          ? `Maps “${a}” and “${b}” share ${x.cells} cell(s) (${s}) but fill different squares, so both show up whole.`
+          : `Los mapas «${a}» y «${b}» comparten ${x.cells} celda(s) (${s}) pero ocupan casillas distintas, así que los dos salen enteros.`;
+      if (x.squares === null)
+        return inEnglish
+          ? `Maps “${a}” and “${b}” share ${x.cells} cell(s) (${s}) and their files couldn’t be measured. Where they overlap, “${a}” wins because it comes first in the map order (Maps tab).`
+          : `Los mapas «${a}» y «${b}» comparten ${x.cells} celda(s) (${s}) y no se pudieron medir sus archivos. Donde coincidan, manda «${a}» porque va antes en el orden de mapas (pestaña Mapas).`;
       return inEnglish
-        ? `Maps “${x.maps[0]}” and “${x.maps[1]}” share ${x.cells} cell(s) (${x.sample.join(', ')}). “${x.maps[0]}” wins because it comes first in the map order (Export tab).`
-        : `Los mapas «${x.maps[0]}» y «${x.maps[1]}» comparten ${x.cells} celda(s) (${x.sample.join(', ')}). Manda «${x.maps[0]}» porque va antes en el orden de mapas (pestaña Exportar).`;
+        ? `Maps “${a}” and “${b}” fill the same ${x.squares} square(s) in ${x.cells} cell(s) (${s}). There “${a}” wins because it comes first in the map order (Maps tab).`
+        : `Los mapas «${a}» y «${b}» ocupan las mismas ${x.squares} casilla(s) en ${x.cells} celda(s) (${s}). Ahí manda «${a}» porque va antes en el orden de mapas (pestaña Mapas).`;
+    }
+    case 'MapOverTown':
+      return inEnglish
+        ? `Map “${x.map}” covers ${x.cells} town cell(s) of the base game and replaces what was there on the squares it fills.`
+        : `El mapa «${x.map}» ocupa ${x.cells} celda(s) de pueblo del juego y cambia lo que había en las casillas que rellena.`;
     case 'ZbNotInstalled':
       return inEnglish ? `“${m}” is a Java mod and ZombieBuddy isn’t installed.` : `«${m}» es un mod Java y ZombieBuddy no está instalado.`;
     case 'ZbVersion':

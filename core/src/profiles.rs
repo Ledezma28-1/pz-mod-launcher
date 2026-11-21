@@ -179,6 +179,12 @@ pub struct Profile {
     pub accepted_overrides: Vec<AcceptedOverride>,
     #[serde(default, rename = "secciones", skip_serializing_if = "Vec::is_empty")]
     pub sections: Vec<String>,
+    #[serde(
+        default,
+        rename = "mapas_fuera_del_servidor",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub server_excluded_maps: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
@@ -326,6 +332,7 @@ impl Profile {
             last_use: None,
             accepted_overrides: Vec::new(),
             sections: Vec::new(),
+            server_excluded_maps: Vec::new(),
         }
     }
 
@@ -480,6 +487,14 @@ pub fn order_maps(saved: &[String], detected: &[String]) -> Vec<String> {
     out.retain(|m| m != BASE_MAP);
     out.push(BASE_MAP.to_string());
     out
+}
+
+pub fn server_maps(order: &[String], excluded: &[String]) -> Vec<String> {
+    order
+        .iter()
+        .filter(|m| *m == BASE_MAP || !excluded.contains(m))
+        .cloned()
+        .collect()
 }
 
 pub struct ProfileStore {

@@ -104,7 +104,8 @@ export type FindingKind =
   | { kind: 'LuaGlobalReplaced'; wins: string | null; functions: LuaFn[]; total: number; related: boolean; accepted: boolean; movable: boolean }
   | { kind: 'TiledefRepeated'; num: string }
   | { kind: 'ScriptRedefined'; wins: string; objects: string[]; total: number; identical: number; properties: string[]; related: boolean; accepted: boolean }
-  | { kind: 'MapCellsShared'; maps: [string, string]; cells: number; sample: string[] }
+  | { kind: 'MapCellsShared'; maps: [string, string]; cells: number; sample: string[]; squares: number | null }
+  | { kind: 'MapOverTown'; map: string; cells: number }
   | { kind: 'ZbNotInstalled' }
   | { kind: 'ZbVersion'; zb: string; ranges: [string | null, string | null][] }
   | { kind: 'ZbJarInvalid'; reason: string }
@@ -440,7 +441,7 @@ export interface ExportRow {
 
 export interface Export {
   mods: ExportRow[];
-  maps: { folder: string; mod_name: string | null }[];
+  maps: { folder: string; mod_name: string | null; server: boolean }[];
   saved_maps: boolean;
   lost_maps: string[];
   default_txt: string;
@@ -563,4 +564,62 @@ export interface GameListChange {
   reordered: boolean;
   maps: boolean;
   emptied: boolean;
+}
+
+export type Cell = [number, number];
+
+export interface PyramidInfo {
+  source: string;
+  bounds: [number, number, number, number];
+  levels: number;
+}
+
+export interface MapInfo {
+  key: string;
+  folder: string;
+  title: string;
+  mod_key: string;
+  mod_id: string | null;
+  mod_name: string;
+  workshop_id: number | null;
+  active: boolean;
+  order: number | null;
+  server: boolean;
+  cells: Cell[];
+  pyramid: PyramidInfo | null;
+  thumb: string | null;
+  spawns: [number, number][];
+  requires: string[];
+  require_keys: string[];
+  require_ids: string[];
+  compatible: boolean;
+}
+
+export type CellState = { state: 'Free' } | { state: 'Shared'; squares: number | null } | { state: 'Touching' } | { state: 'SameMod' };
+
+export type CellInfo = { cell: Cell; maps: string[]; vanilla: boolean; urban: boolean; clash?: [number, number, number][] } & CellState;
+
+export interface TownZone {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  points?: number[];
+}
+
+export interface TownInfo {
+  name: string;
+  spawns: [number, number][];
+}
+
+export interface MapsView {
+  maps: MapInfo[];
+  cells: CellInfo[];
+  towns: TownInfo[];
+  town_zones: TownZone[];
+  bounds: [number, number, number, number];
+  world: [number, number, number, number];
+  vanilla: PyramidInfo | null;
+  server_line: string[];
+  saved_order: boolean;
 }

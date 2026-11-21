@@ -1,9 +1,6 @@
 <script lang="ts">
   import CircleX from '@lucide/svelte/icons/circle-x';
   import Copy from '@lucide/svelte/icons/copy';
-  import ChevronUp from '@lucide/svelte/icons/chevron-up';
-  import ChevronDown from '@lucide/svelte/icons/chevron-down';
-  import Lock from '@lucide/svelte/icons/lock';
   import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
   import Share2 from '@lucide/svelte/icons/share-2';
   import FolderOpen from '@lucide/svelte/icons/folder-open';
@@ -12,13 +9,11 @@
   import { t } from '../i18n.svelte';
   import type { Export } from '../types';
 
-  const BASE = 'Muldraugh, KY';
   const id = $derived(app.view!.id);
 
   let data = $state<Export | null>(null);
   let error = $state<string | null>(null);
   let onlyEnabled = $state(true);
-  let saving = $state(false);
 
   async function load() {
     try {
@@ -38,7 +33,7 @@
   const modsLine = $derived('Mods=' + active.map((m) => m.id.replace(/^\\/, '')).join(';'));
   const workshop = $derived([...new Set(active.map((m) => m.workshop_id).filter((x): x is number => x !== null))]);
   const workshopLine = $derived('WorkshopItems=' + workshop.join(';'));
-  const mapsLine = $derived('Map=' + (data?.maps ?? []).map((m) => m.folder).join(';'));
+  const mapsLine = $derived('Map=' + (data?.maps ?? []).filter((m) => m.server).map((m) => m.folder).join(';'));
   const notInstalled = $derived(active.filter((m) => !m.found).length);
   const rows = $derived((data?.mods ?? []).filter((m) => !onlyEnabled || m.enabled));
 
@@ -65,27 +60,6 @@
   const table = () =>
     [[t('export.slot'), t('table.name'), t('export.mod_id'), t('export.workshop_id')].join('\t'), ...rows.map((m) => [m.slot, m.name, m.id, m.workshop_id ?? ''].join('\t'))].join('\n');
 
-  async function moveMap(i: number, step: number) {
-    if (!data) return;
-    const noBase = data.maps.map((m) => m.folder).filter((c) => c !== BASE);
-    const j = i + step;
-    if (j < 0 || j >= noBase.length) return;
-    [noBase[i], noBase[j]] = [noBase[j], noBase[i]];
-    await saveMaps(noBase);
-  }
-
-  async function saveMaps(order: string[]) {
-    saving = true;
-    try {
-      await api.saveMaps(id, order);
-      await load();
-      await app.loadView();
-    } catch (e) {
-      app.notify(message(e), 'error');
-    } finally {
-      saving = false;
-    }
-  }
 </script>
 
 {#snippet line(tag: string, text: string, n: number)}
@@ -130,31 +104,9 @@
     </section>
 
     <section>
-      <div class="head-section">
-        <h2>{t('export.maps')}</h2>
-        {#if data.saved_maps}
-          <button class="btn subtle" disabled={saving} onclick={() => saveMaps([])}>{t('export.maps_auto')}</button>
-        {/if}
-      </div>
-      <p class="text">{data.saved_maps ? t('export.maps_saved_text') : t('export.maps_text_auto')}</p>
-      <ol class="maps">
-        {#each data.maps as m, i (m.folder)}
-          {@const base = m.folder === BASE}
-          <li class:base>
-            <span class="num pos">{i + 1}</span>
-            <span class="folder mono">{m.folder}</span>
-            <span class="de dim">{base ? t('export.base_map') : m.mod_name}</span>
-            {#if base}
-              <span class="fixed dim" title={t('export.base_map_fixed')}><Lock size={13} strokeWidth={1.75} /></span>
-            {:else}
-              <span class="arrows">
-                <button class="arrow" aria-label={t('table.up', { n: m.folder })} disabled={i === 0 || saving} onclick={() => moveMap(i, -1)}><ChevronUp size={14} strokeWidth={2} /></button>
-                <button class="arrow" aria-label={t('table.down', { n: m.folder })} disabled={i >= data.maps.length - 2 || saving} onclick={() => moveMap(i, 1)}><ChevronDown size={14} strokeWidth={2} /></button>
-              </span>
-            {/if}
-          </li>
-        {/each}
-      </ol>
+      <h2>{t('export.maps')}</h2>
+      <p class="text">{t('export.maps_moved')}</p>
+      <button class="btn" onclick={() => (app.tab = 'maps')}>{t('export.maps_open')}</button>
       {#if data.lost_maps.length}
         <p class="note severity-warning">{t('export.lost_maps', { m: data.lost_maps.join(', ') })}</p>
       {/if}
@@ -283,67 +235,6 @@
   .code.height {
     max-height: 320px;
     word-break: normal;
-  }
-  .maps {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    border: 1px solid var(--line);
-    border-radius: var(--radio);
-    background: var(--surface);
-  }
-  .maps li {
-    display: grid;
-    grid-template-columns: 32px minmax(0, 1fr) minmax(0, 1fr) 52px;
-    align-items: center;
-    gap: 8px;
-    height: 32px;
-    padding: 0 8px;
-    border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
-    font-size: var(--t-s);
-  }
-  .maps li:last-child {
-    border-bottom: 0;
-  }
-  .maps li.base {
-    background: var(--surface-2);
-  }
-  .pos {
-    color: var(--ink-3);
-    text-align: right;
-  }
-  .folder,
-  .de,
-  .name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .arrows,
-  .fixed {
-    display: flex;
-    justify-content: flex-end;
-    gap: 2px;
-  }
-  .arrow {
-    display: grid;
-    place-items: center;
-    width: 22px;
-    height: 22px;
-    padding: 0;
-    border: 1px solid transparent;
-    border-radius: var(--radio);
-    background: none;
-    color: var(--ink-2);
-    cursor: pointer;
-  }
-  .arrow:hover:not(:disabled) {
-    border-color: var(--line-strong);
-    background: var(--surface-2);
-  }
-  .arrow:disabled {
-    color: color-mix(in srgb, var(--ink-3) 45%, transparent);
-    cursor: default;
   }
   .table {
     margin-top: 10px;

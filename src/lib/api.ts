@@ -37,6 +37,7 @@ import type {
   ProfileView,
   SteamProfile,
   GameListChange,
+  MapsView,
 } from './types';
 import { translateError } from './errors';
 import { i18n } from './i18n.svelte';
@@ -125,7 +126,8 @@ export const api = {
     asServer: boolean,
     asPreset: boolean,
   ) => call<string[]>('sandbox_save', { id, language, name, sandbox, server, asServer, asPreset }),
-  saveMaps: (id: string, maps: string[]) => call<void>('profile_maps', { id, maps }),
+  mapsView: (id: string, language: string) => call<MapsView>('profile_maps_view', { id, language }),
+  saveMaps: (id: string, maps: string[], serverExcluded: string[]) => call<void>('profile_maps', { id, maps, serverExcluded }),
   library: () => call<LibraryMod[]>('library'),
   detail: (key: string) => call<ModDetails>('mod_details', { key }),
   launch: (id: string) => call<number>('launch', { id }),

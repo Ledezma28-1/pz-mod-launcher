@@ -26,6 +26,8 @@ pub enum Error {
     },
     #[error("clase Java no válida: {0}")]
     Class(String),
+    #[error("archivo de mapa no válido: {0}")]
+    Map(String),
     #[error("no encontrado: {0}")]
     NotFound(String),
     #[error("{0}")]

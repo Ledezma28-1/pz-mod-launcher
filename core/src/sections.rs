@@ -163,6 +163,48 @@ impl Profile {
         Ok(prev)
     }
 
+    pub fn pull_requirements(&mut self, edges: &[crate::order::Edge]) {
+        use crate::order::Rule;
+        let mut at: std::collections::BTreeMap<String, usize> = self
+            .mods
+            .iter()
+            .map(|m| (normalize_id(&m.id), self.section_index(m)))
+            .collect();
+        let mut pulled: std::collections::BTreeMap<String, usize> = Default::default();
+        let mut seq = 0;
+        let mut changed = true;
+        while changed {
+            changed = false;
+            for a in edges {
+                if !matches!(a.rule, Rule::Requires | Rule::ZbFixed) {
+                    continue;
+                }
+                let (Some(&sb), Some(&sa)) = (at.get(&a.before), at.get(&a.after)) else {
+                    continue;
+                };
+                if sb > sa {
+                    at.insert(a.before.clone(), sa);
+                    seq += 1;
+                    pulled.insert(a.before.clone(), seq);
+                    changed = true;
+                }
+            }
+        }
+        if pulled.is_empty() {
+            return;
+        }
+        let (mut moved, rest): (Vec<ModEntry>, Vec<ModEntry>) = std::mem::take(&mut self.mods)
+            .into_iter()
+            .partition(|m| pulled.contains_key(&normalize_id(&m.id)));
+        for m in &mut moved {
+            let k = at[&normalize_id(&m.id)];
+            m.section = k.checked_sub(1).map(|i| self.sections[i].clone());
+        }
+        moved.sort_by_key(|m| std::cmp::Reverse(pulled[&normalize_id(&m.id)]));
+        self.mods = moved.into_iter().chain(rest).collect();
+        self.regroup();
+    }
+
     pub fn sanitize_sections(&mut self) {
         let mut kept: Vec<String> = Vec::new();
         for s in std::mem::take(&mut self.sections) {

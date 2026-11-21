@@ -47,7 +47,7 @@
     const k = h.kind.kind;
     if (k.startsWith('Zb') || k === 'JavaPatchOverlap' || k === 'JavaLinkBroken') return 'java';
     if (k === 'Cycle' || k === 'Incompatible' || k === 'DuplicatedId') return 'order';
-    if (['OverriddenFiles', 'OverridesGame', 'ScriptRedefined', 'TiledefRepeated', 'MapCellsShared'].includes(k)) return 'files';
+    if (['OverriddenFiles', 'OverridesGame', 'ScriptRedefined', 'TiledefRepeated', 'MapCellsShared', 'MapOverTown'].includes(k)) return 'files';
     if (k === 'ModifiedInstall') return 'game';
     if (k === 'LuaGlobalReplaced') return 'lua';
     return 'load';

@@ -15,6 +15,7 @@
   import ConflictList from './lib/components/ConflictList.svelte';
   import ProfileSettings from './lib/components/ProfileSettings.svelte';
   import ProfileExport from './lib/components/ProfileExport.svelte';
+  import MapsTab from './lib/components/MapsTab.svelte';
   import SandboxEditor from './lib/components/SandboxEditor.svelte';
   import Console from './lib/components/Console.svelte';
   import Terminal from '@lucide/svelte/icons/square-terminal';
@@ -106,7 +107,7 @@
       const order = q.get('order');
       if (order) await app.proposeOrder();
       const tab = q.get('tab');
-      if (tab === 'order' || tab === 'conflicts' || tab === 'export' || tab === 'sandbox' || tab === 'console' || tab === 'settings') {
+      if (tab === 'order' || tab === 'conflicts' || tab === 'maps' || tab === 'export' || tab === 'sandbox' || tab === 'console' || tab === 'settings') {
         app.tab = tab;
         app.screen = 'profile';
       }
@@ -128,7 +129,7 @@
 
   const widths = [72, 58, 81, 64, 77, 52, 69, 83, 60, 74, 56, 79];
 
-  const withPanel = $derived(app.screen === 'profile' && !!app.view && !app.loadingView && app.view.rows.length > 0 && app.tab !== 'settings' && app.tab !== 'export' && app.tab !== 'sandbox' && app.tab !== 'console');
+  const withPanel = $derived(app.screen === 'profile' && !!app.view && !app.loadingView && app.view.rows.length > 0 && app.tab !== 'settings' && app.tab !== 'maps' && app.tab !== 'export' && app.tab !== 'sandbox' && app.tab !== 'console');
   const showConsolePanel = $derived(app.consolePanel && !(app.screen === 'profile' && app.tab === 'console') && (!!app.profileId || !!app.session));
   const consoleErrors = $derived(app.errors.list.filter((e) => e.severity === 'error').length);
 
@@ -243,6 +244,8 @@
             {/if}
           {:else if app.tab === 'conflicts'}
             <ConflictList />
+          {:else if app.tab === 'maps'}
+            {#key app.view.id}<MapsTab />{/key}
           {:else if app.tab === 'export'}
             <ProfileExport />
           {:else if app.tab === 'sandbox'}

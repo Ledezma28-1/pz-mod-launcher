@@ -529,6 +529,78 @@ function sbReal() {
 let viewsOpened = 0;
 let savesFixed = false;
 
+function demoMaps() {
+  const box = (x0: number, y0: number, x1: number, y1: number): [number, number][] => {
+    const out: [number, number][] = [];
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) out.push([x, y]);
+    return out;
+  };
+  const map = (key: string, title: string, mod: string, cells: [number, number][], on: boolean, order: number | null, extra: Record<string, unknown> = {}) => ({
+    key,
+    folder: title,
+    title,
+    mod_key: `ws:1/${mod}`,
+    mod_id: mod,
+    mod_name: mod,
+    workshop_id: null,
+    active: active[mod] ?? on,
+    order,
+    server: active[mod] ?? on,
+    cells,
+    pyramid: null,
+    thumb: null,
+    spawns: [] as [number, number][],
+    requires: [] as string[],
+    require_keys: [] as string[],
+    require_ids: [] as string[],
+    compatible: true,
+    ...extra,
+  });
+  const maps = [
+    map('rc', 'Raven Creek', 'RavenCreek', box(16, 56, 25, 69), true, 0, { spawns: [[5200, 15800]] }),
+    map('mall', 'The Mall', 'SecretZ', box(53, 22, 55, 23), true, 1),
+    map('annex', 'Mall Annex', 'AnnexMod', [[55, 23]], true, 2),
+    map('sv0', 'Snakeville 0', 'Snakeville', box(23, 22, 24, 23), true, 3),
+    map('barco', 'Barco', 'BarcoMod', [[24, 23]], true, 4, { server: false }),
+    map('cp6', 'Checkpoint 6', 'SecretZ', box(47, 9, 48, 10), false, null),
+    map('bunker', 'Bunker', 'BunkerMod', box(54, 22, 55, 22), false, null, { compatible: false }),
+  ];
+  const cells: Record<string, unknown>[] = [];
+  const seen = new Map<string, string[]>();
+  for (const m of maps.filter((x) => x.active)) for (const [x, y] of m.cells) seen.set(`${x},${y}`, [...(seen.get(`${x},${y}`) ?? []), m.key]);
+  for (const [k, keys] of seen) {
+    const [x, y] = k.split(',').map(Number);
+    const state = keys.length < 2 ? { state: 'Free' } : k === '55,23' ? { state: 'Shared', squares: 1240 } : { state: 'Touching' };
+    const clash = k === '55,23' ? Array.from({ length: 40 }, (_, i) => [100 + i, 30, 31]) : undefined;
+    cells.push({ cell: [x, y], maps: keys, vanilla: x < 78 && y < 63, urban: x >= 53 && x <= 54 && y === 22, ...state, clash });
+  }
+  return {
+    maps: [...maps.filter((m) => m.active), ...maps.filter((m) => !m.active)],
+    cells,
+    towns: [
+      { name: 'Muldraugh, KY', spawns: [[10650, 9800]] },
+      { name: 'Riverside, KY', spawns: [[6500, 5400]] },
+      { name: 'Rosewood, KY', spawns: [[8100, 11650]] },
+      { name: 'West Point, KY', spawns: [[11900, 6900]] },
+    ],
+    town_zones: [
+      { x: 10450, y: 9600, w: 420, h: 380 },
+      { x: 10900, y: 9700, w: 160, h: 220 },
+      { x: 6300, y: 5200, w: 380, h: 320 },
+      { x: 7900, y: 11450, w: 360, h: 330 },
+      { x: 11650, y: 6700, w: 520, h: 330 },
+      { x: 10800, y: 9900, w: 200, h: 150 },
+      { x: 13700, y: 5700, w: 301, h: 201, points: [13700, 5700, 13850, 5900, 14000, 5900, 14000, 5700] },
+      { x: 13650, y: 5650, w: 150, h: 100 },
+    ],
+    bounds: [0, 0, 77, 69],
+    world: [0, 0, 77, 62],
+    vanilla: null,
+    server_line: [...maps.filter((m) => m.active && m.server).map((m) => m.folder), 'Muldraugh, KY'],
+    saved_order: true,
+  };
+}
+
 export async function demo<T>(cmd: string, args: Record<string, unknown>): Promise<T> {
   await wait(state === 'loading' ? 1e9 : 120);
   if (state === 'error' && cmd === 'environment') {
@@ -699,14 +771,16 @@ export async function demo<T>(cmd: string, args: Record<string, unknown>): Promi
       return r(detail(args.key as string));
     case 'library':
       return r(library);
+    case 'profile_maps_view':
+      return r(demoMaps());
     case 'profile_export': {
       const v = view();
       return r({
         mods: v.rows.map((f, i) => ({ slot: i + 1, name: f.name, id: f.id, workshop_id: f.workshop_id, enabled: f.enabled, found: f.found })),
         maps: [
-          { folder: 'Raven Creek B42', mod_name: 'Raven Creek' },
-          { folder: 'Spawn Selector', mod_name: 'Spawn Selector' },
-          { folder: 'Muldraugh, KY', mod_name: null },
+          { folder: 'Raven Creek B42', mod_name: 'Raven Creek', server: true },
+          { folder: 'Spawn Selector', mod_name: 'Spawn Selector', server: true },
+          { folder: 'Muldraugh, KY', mod_name: null, server: true },
         ],
         saved_maps: false,
         lost_maps: [],

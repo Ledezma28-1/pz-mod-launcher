@@ -82,6 +82,11 @@ pub enum Kind {
         maps: (String, String),
         cells: usize,
         sample: Vec<String>,
+        squares: Option<u32>,
+    },
+    MapOverTown {
+        map: String,
+        cells: usize,
     },
     ZbNotInstalled,
     ZbVersion {
@@ -358,9 +363,22 @@ impl Finding {
                 if *identical > 0 { format!(" ({identical} más son idénticos)") } else { String::new() },
                 if *related { " (relacionados: uno requiere al otro o son del mismo elemento)" } else if *accepted { " (dado por bueno)" } else { "" }
             ),
-            Kind::MapCellsShared { maps: (a, b), cells, sample } => format!(
-                "los mapas «{a}» y «{b}» comparten {cells} celda(s) ({}): manda «{a}» porque va antes en el orden de mapas",
-                sample.join(", ")
+            Kind::MapCellsShared { maps: (a, b), cells, sample, squares } => match squares {
+                Some(0) => format!(
+                    "los mapas «{a}» y «{b}» comparten {cells} celda(s) ({}) sin ocupar las mismas casillas: conviven sin pisarse",
+                    sample.join(", ")
+                ),
+                Some(n) => format!(
+                    "los mapas «{a}» y «{b}» ocupan {n} casilla(s) a la vez en {cells} celda(s) ({}): en esas casillas manda «{a}» porque va antes en el orden de mapas",
+                    sample.join(", ")
+                ),
+                None => format!(
+                    "los mapas «{a}» y «{b}» comparten {cells} celda(s) ({}) y no se pudo medir qué casillas ocupan: si coinciden, manda «{a}» porque va antes en el orden de mapas",
+                    sample.join(", ")
+                ),
+            },
+            Kind::MapOverTown { map, cells } => format!(
+                "el mapa «{map}» ocupa {cells} celda(s) de zona urbana del juego: en las casillas que ocupa cambia lo que había"
             ),
             Kind::ZbNotInstalled => format!("«{m}» es un mod Java y ZombieBuddy no está instalado en el juego"),
             Kind::ZbVersion { zb, ranges } => format!(
@@ -471,6 +489,7 @@ pub struct Context<'a> {
     pub accepted_overrides: Vec<(String, String)>,
     pub maps: Vec<String>,
     pub sections: Vec<String>,
+    pub urban: Option<std::sync::Arc<crate::maps::Urban>>,
 }
 
 pub struct ProfileEntry<'a> {
@@ -479,6 +498,17 @@ pub struct ProfileEntry<'a> {
     pub pinned: bool,
     pub found: Option<&'a ScannedMod>,
     pub section: usize,
+}
+
+impl<'a> ProfileEntry<'a> {
+    pub fn order_entry(&self) -> Entry<'a> {
+        Entry {
+            id: self.id.clone(),
+            enabled: self.enabled,
+            pinned: self.pinned,
+            info: self.found.and_then(|m| m.info.as_ref()),
+        }
+    }
 }
 
 const SHOWS: usize = 4;
@@ -1643,15 +1673,7 @@ pub fn analyze(entries: &[ProfileEntry], visible: &[ScannedMod], ctx: &Context) 
         }
     }
 
-    let entry_order: Vec<Entry> = entries
-        .iter()
-        .map(|e| Entry {
-            id: e.id.clone(),
-            enabled: e.enabled,
-            pinned: e.pinned,
-            info: e.found.and_then(|m| m.info.as_ref()),
-        })
-        .collect();
+    let entry_order: Vec<Entry> = entries.iter().map(|e| e.order_entry()).collect();
     let res_order = order::sort(&entry_order);
     for c in &res_order.cycles {
         out.push(Finding {
@@ -2110,49 +2132,81 @@ pub fn analyze(entries: &[ProfileEntry], visible: &[ScannedMod], ctx: &Context) 
         });
     }
 
-    let mut map_cells: Vec<(String, String, BTreeSet<String>)> = Vec::new();
-    for (e, m) in &loaded {
-        for name in m.maps() {
-            let prefix = format!("media/maps/{}/", name.to_lowercase());
-            let cells: BTreeSet<String> = m
-                .relative_paths()
-                .iter()
-                .filter_map(|p| p.strip_prefix(&prefix)?.strip_suffix(".lotheader"))
-                .filter(|c| !c.contains('/'))
-                .map(str::to_string)
-                .collect();
-            if !cells.is_empty() {
-                map_cells.push((name, e.id.clone(), cells));
-            }
-        }
-    }
-    let detected: Vec<String> = map_cells.iter().map(|(n, ..)| n.clone()).collect();
+    let mut map_entries: Vec<(String, crate::maps::MapEntry)> = crate::maps::dedupe_by_folder(
+        loaded
+            .iter()
+            .flat_map(|(e, m)| {
+                crate::maps::entries(m)
+                    .into_iter()
+                    .filter(|x| !x.cells.is_empty())
+                    .map(|x| (e.id.clone(), x))
+            })
+            .collect(),
+        |(_, x)| &x.folder,
+    );
+    let detected: Vec<String> = map_entries.iter().map(|(_, x)| x.folder.clone()).collect();
     let order = crate::profiles::order_maps(&ctx.maps, &detected);
-    map_cells.sort_by_key(|(n, ..)| order.iter().position(|o| o == n).unwrap_or(usize::MAX));
-    for (i, (a, ma, ca)) in map_cells.iter().enumerate() {
-        for (b, mb, cb) in &map_cells[i + 1..] {
-            let shared: Vec<&String> = ca.intersection(cb).collect();
+    map_entries.sort_by_key(|(_, x)| {
+        order
+            .iter()
+            .position(|o| *o == x.folder)
+            .unwrap_or(usize::MAX)
+    });
+    for (i, (ma, a)) in map_entries.iter().enumerate() {
+        for (mb, b) in &map_entries[i + 1..] {
+            let shared: Vec<crate::maps::Cell> = a
+                .cells
+                .iter()
+                .filter(|c| b.cells.contains(c))
+                .copied()
+                .collect();
             if shared.is_empty() {
                 continue;
             }
+            let squares: Option<u32> = shared.iter().map(|c| crate::maps::overlap(a, b, *c)).sum();
             let mut mods = vec![ma.clone()];
             if mb != ma {
                 mods.push(mb.clone());
             }
             out.push(Finding {
-                severity: if mods.len() == 1 {
-                    Severity::Info
-                } else {
-                    Severity::Warning
+                severity: match (mods.len(), squares) {
+                    (_, Some(0)) => Severity::Detail,
+                    (1, _) => Severity::Info,
+                    _ => Severity::Warning,
                 },
                 mods,
                 kind: Kind::MapCellsShared {
-                    maps: (a.clone(), b.clone()),
+                    maps: (a.folder.clone(), b.folder.clone()),
                     cells: shared.len(),
-                    sample: shared.iter().take(SHOWS).map(|c| c.to_string()).collect(),
+                    sample: shared
+                        .iter()
+                        .take(SHOWS)
+                        .map(|(x, y)| format!("{x}_{y}"))
+                        .collect(),
+                    squares,
                 },
                 fixes: vec![],
             });
+        }
+    }
+    if let Some(urban) = &ctx.urban {
+        for (id, m) in &map_entries {
+            let cells = m
+                .cells
+                .iter()
+                .filter(|c| crate::maps::town_squares(m, **c, urban) != Some(0))
+                .count();
+            if cells > 0 {
+                out.push(Finding {
+                    severity: Severity::Info,
+                    mods: vec![id.clone()],
+                    kind: Kind::MapOverTown {
+                        map: m.folder.clone(),
+                        cells,
+                    },
+                    fixes: vec![],
+                });
+            }
         }
     }
 

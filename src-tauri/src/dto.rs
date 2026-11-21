@@ -282,15 +282,7 @@ impl ProfileView {
                 }
             })
             .collect();
-        let entries: Vec<order::Entry> = resolved
-            .iter()
-            .map(|x| order::Entry {
-                id: x.id.clone(),
-                enabled: x.enabled,
-                pinned: x.pinned,
-                info: x.found.and_then(|m| m.info.as_ref()),
-            })
-            .collect();
+        let entries: Vec<order::Entry> = resolved.iter().map(|x| x.order_entry()).collect();
         let edges = order::edges(&entries);
         let current: Vec<String> = resolved
             .iter()
@@ -827,6 +819,7 @@ pub struct ExportRow {
 pub struct ExportMap {
     pub folder: String,
     pub mod_name: Option<String>,
+    pub server: bool,
 }
 
 #[derive(Serialize)]
@@ -875,9 +868,11 @@ impl Export {
         }
         let folders: Vec<String> = detected.iter().map(|(c, _)| c.clone()).collect();
         let order = pzmm_core::profiles::order_maps(&p.maps, &folders);
+        let server = pzmm_core::profiles::server_maps(&order, &p.server_excluded_maps);
         let maps = order
             .into_iter()
             .map(|c| ExportMap {
+                server: server.contains(&c),
                 mod_name: detected
                     .iter()
                     .find(|(x, _)| *x == c)
@@ -991,6 +986,12 @@ pub struct SharedProfile {
     pub zombiebuddy: pzmm_core::profiles::ZbSettings,
     #[serde(default, rename = "secciones", skip_serializing_if = "Vec::is_empty")]
     pub sections: Vec<String>,
+    #[serde(
+        default,
+        rename = "mapas_fuera_del_servidor",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub server_excluded_maps: Vec<String>,
 }
 
 #[derive(Serialize)]
