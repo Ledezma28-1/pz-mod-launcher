@@ -70,6 +70,14 @@ pub fn id_list(value: &str) -> Vec<String> {
         .collect()
 }
 
+fn add_ids(to: &mut Vec<String>, value: &str) {
+    for id in id_list(value) {
+        if !to.contains(&id) {
+            to.push(id);
+        }
+    }
+}
+
 pub fn normalize_id(id: &str) -> String {
     id.trim().trim_start_matches('\\').trim().to_string()
 }
@@ -134,10 +142,10 @@ impl ModInfo {
                 "poster" if !v.is_empty() => m.posters.push(v.to_string()),
                 "pack" if !v.is_empty() => m.packs.push(v.to_string()),
                 "tiledef" if !v.is_empty() => m.tiledefs.push(v.to_string()),
-                "require" => m.requires.extend(id_list(v)),
-                "incompatible" => m.incompatible.extend(id_list(v)),
-                "loadmodafter" => m.load_after.extend(id_list(v)),
-                "loadmodbefore" => m.load_before.extend(id_list(v)),
+                "require" => add_ids(&mut m.requires, v),
+                "incompatible" => add_ids(&mut m.incompatible, v),
+                "loadmodafter" => add_ids(&mut m.load_after, v),
+                "loadmodbefore" => add_ids(&mut m.load_before, v),
                 "javapkgname" => {
                     has_java = true;
                     if java.pkg.is_none() && !v.is_empty() {

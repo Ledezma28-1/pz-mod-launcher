@@ -55,14 +55,6 @@
     const env = app.environment;
     api.openUrl(issueUrl(__VERSION__, env?.game.version ?? null, env?.zb.in_game ?? null)).catch((e) => app.notify(message(e), 'error'));
   }
-
-  async function openLogs() {
-    try {
-      await api.openFolder(await api.logsFolder());
-    } catch (e) {
-      app.notify(message(e), 'error');
-    }
-  }
 </script>
 
 <section class="screen">
@@ -99,7 +91,7 @@
           {/if}
           {#if tm.id === 'failures'}
             <div class="buttons">
-              <button class="btn" onclick={openLogs}><FolderOpen size={14} strokeWidth={1.75} />{t('settings.logs_open')}</button>
+              <button class="btn" onclick={() => app.openLogs()}><FolderOpen size={14} strokeWidth={1.75} />{t('settings.logs_open')}</button>
               <button class="btn" onclick={report}><Bug size={14} strokeWidth={1.75} />{t('help.report')}</button>
             </div>
           {/if}

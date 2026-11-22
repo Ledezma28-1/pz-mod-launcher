@@ -1068,21 +1068,10 @@ fn do_import(a: &ProfileStore, id: &str, list: &std::path::Path) -> pzmm_core::C
     let mut p = a.load(id)?;
     let l = pzmm_core::mod_list::ModList::read_file(list)?;
     let vis = scan_mods(&game::detect()?);
-    p.mods = l
-        .mods
-        .iter()
-        .map(|mid| ModEntry {
-            key: vis
-                .iter()
-                .find(|m| m.id() == Some(mid.as_str()))
-                .map(|m| m.key.clone())
-                .unwrap_or_default(),
-            id: mid.clone(),
-            enabled: true,
-            pinned: false,
-            section: None,
-        })
-        .collect();
+    p.mods = pzmm_core::profiles::entries_from(&l, |id| {
+        let found = vis.iter().find(|m| m.id() == Some(id));
+        found.map(|m| m.key.clone())
+    });
     p.maps = l.maps;
     a.save(&p)?;
     let sin = p.mods.iter().filter(|m| m.key.is_empty()).count();

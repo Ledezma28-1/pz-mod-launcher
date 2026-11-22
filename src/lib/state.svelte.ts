@@ -561,6 +561,14 @@ class State {
     }
   }
 
+  async openLogs() {
+    try {
+      await api.openFolder(await api.logsFolder());
+    } catch (e) {
+      this.notify(message(e), 'error');
+    }
+  }
+
   async loadSettings() {
     try {
       this.settings = await api.settingsGet();

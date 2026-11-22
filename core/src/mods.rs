@@ -239,7 +239,7 @@ impl ScannedMod {
     }
 
     pub fn lua_all_with(mods: &[&ScannedMod], progress: &(dyn Fn(usize, usize) + Sync)) {
-        Self::each_in_threads(
+        in_threads(
             mods,
             |m| {
                 m.lua_definitions();
@@ -249,7 +249,7 @@ impl ScannedMod {
     }
 
     pub fn script_refs_all(mods: &[&ScannedMod]) {
-        Self::each_in_threads(
+        in_threads(
             mods,
             |m| {
                 m.script_refs();
@@ -263,7 +263,7 @@ impl ScannedMod {
     }
 
     pub fn scripts_all_with(mods: &[&ScannedMod], progress: &(dyn Fn(usize, usize) + Sync)) {
-        Self::each_in_threads(
+        in_threads(
             mods,
             |m| {
                 m.script_objects();
@@ -272,38 +272,12 @@ impl ScannedMod {
         );
     }
 
-    fn each_in_threads(
-        mods: &[&ScannedMod],
-        f: impl Fn(&ScannedMod) + Sync,
-        progress: &(dyn Fn(usize, usize) + Sync),
-    ) {
-        let threads = std::thread::available_parallelism()
-            .map(|n| n.get())
-            .unwrap_or(4)
-            .clamp(2, 8);
-        let next = std::sync::atomic::AtomicUsize::new(0);
-        let done = std::sync::atomic::AtomicUsize::new(0);
-        std::thread::scope(|s| {
-            for _ in 0..threads {
-                s.spawn(|| {
-                    loop {
-                        let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                        let Some(m) = mods.get(i) else { break };
-                        f(m);
-                        let d = done.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
-                        progress(d, mods.len());
-                    }
-                });
-            }
-        });
-    }
-
     pub fn index_all(mods: &[&ScannedMod]) {
         Self::index_all_with(mods, &|_, _| {});
     }
 
     pub fn index_all_with(mods: &[&ScannedMod], progress: &(dyn Fn(usize, usize) + Sync)) {
-        Self::each_in_threads(
+        in_threads(
             mods,
             |m| {
                 m.relative_paths();
@@ -318,6 +292,32 @@ impl ScannedMod {
         let root = self.roots().into_iter().nth(ix.roots[i] as usize)?;
         Some(paths::long(&root.join(rel)))
     }
+}
+
+pub(crate) fn in_threads<T: Sync>(
+    items: &[T],
+    f: impl Fn(&T) + Sync,
+    progress: &(dyn Fn(usize, usize) + Sync),
+) {
+    let threads = std::thread::available_parallelism()
+        .map_or(4, |n| n.get())
+        .clamp(2, 8)
+        .min(items.len());
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let done = std::sync::atomic::AtomicUsize::new(0);
+    std::thread::scope(|s| {
+        for _ in 0..threads {
+            s.spawn(|| {
+                loop {
+                    let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    let Some(x) = items.get(i) else { break };
+                    f(x);
+                    let d = done.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+                    progress(d, items.len());
+                }
+            });
+        }
+    });
 }
 
 fn subfolders(dir: &Path) -> Vec<String> {

@@ -448,8 +448,14 @@ fn values_read(t: &[(Tok, u32)]) -> BTreeSet<String> {
     out
 }
 
+const MAX_FILE: u64 = 16 << 20;
+
 pub fn definitions_of(path: &Path) -> Vec<Def> {
-    std::fs::read(crate::paths::long(path))
+    let path = crate::paths::long(path);
+    if std::fs::metadata(&path).is_ok_and(|m| m.len() > MAX_FILE) {
+        return Vec::new();
+    }
+    std::fs::read(path)
         .map(|b| definitions(&String::from_utf8_lossy(&b)))
         .unwrap_or_default()
 }

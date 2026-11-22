@@ -35,14 +35,6 @@
     }
   }
 
-  async function openLogs() {
-    try {
-      await open(await api.logsFolder());
-    } catch (e) {
-      app.notify(message(e), 'error');
-    }
-  }
-
   const themes: Theme[] = ['system', 'light', 'dark'];
 
   let systemDark = $state(matchMedia('(prefers-color-scheme: dark)').matches);
@@ -400,7 +392,7 @@
       <div class="with-help">
         <div class="path-row">
           <span class="num size">{maint ? size(maint.logs_bytes) : t('settings.calculating')}</span>
-          <button class="btn" onclick={openLogs}><FolderOpen size={14} strokeWidth={1.75} />{t('settings.logs_open')}</button>
+          <button class="btn" onclick={() => app.openLogs()}><FolderOpen size={14} strokeWidth={1.75} />{t('settings.logs_open')}</button>
           <button class="btn subtle" disabled={!maint} onclick={() => clear('logs')}>{t('settings.maint.logs_clear')}</button>
         </div>
         <p class="help">{t('settings.logs_help')}</p>

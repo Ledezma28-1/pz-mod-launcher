@@ -9,6 +9,7 @@ export interface ModEntry {
 }
 
 export interface Cluster {
+  id: string;
   key: string;
   severity: Severity;
   entries: ModEntry[];
@@ -62,16 +63,24 @@ export function clusterByReason(findings: Finding[]): Cluster[] {
     e.findings.sort((a, b) => RANK.indexOf(a.severity) - RANK.indexOf(b.severity));
     e.fixes.sort((a, b) => Number(a.action === 'Disable') - Number(b.action === 'Disable'));
     const key = `${e.severity}|${reasonKey(e.findings[0])}`;
-    const c = clusters.get(key) ?? { key: reasonKey(e.findings[0])!, severity: e.severity, entries: [], disable: [] };
+    const c = clusters.get(key) ?? { id: '', key: reasonKey(e.findings[0])!, severity: e.severity, entries: [], disable: [] };
     c.entries.push(e);
     if (e.fixes.some((f) => f.action === 'Disable' && f.data === e.mod)) c.disable.push(e.mod);
     clusters.set(key, c);
   }
   const out = [...clusters.values()];
   for (const e of alone) {
-    out.push({ key: '', severity: e.severity, entries: [e], disable: [] });
+    out.push({ id: '', key: '', severity: e.severity, entries: [e], disable: [] });
   }
-  return out.sort((a, b) => RANK.indexOf(a.severity) - RANK.indexOf(b.severity));
+  out.sort((a, b) => RANK.indexOf(a.severity) - RANK.indexOf(b.severity));
+  const seen = new Map<string, number>();
+  for (const c of out) {
+    const id = `${c.severity}|${c.key}|${c.entries[0].mod}`;
+    const n = seen.get(id) ?? 0;
+    seen.set(id, n + 1);
+    c.id = `${id}|${n}`;
+  }
+  return out;
 }
 
 export function blockedMods(findings: Finding[]): string[] {

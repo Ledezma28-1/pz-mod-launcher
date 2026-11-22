@@ -177,7 +177,7 @@
               <dd>
                 {#if patches.length}
                   <ul class="patches">
-                    {#each allPatches ? patches : patches.slice(0, PATCHES_SHOWN) as p (p.class_name + '.' + p.method_name)}
+                    {#each allPatches ? patches : patches.slice(0, PATCHES_SHOWN) as p (`${p.class_name}.${p.method_name}|${p.replaces}`)}
                       {@const full = p.method_name ? `${p.class_name}.${p.method_name}` : p.class_name}
                       <li>
                         <span class="mono" title={full}>{full.slice(p.class_name.lastIndexOf('.') + 1)}</span>{#if p.replaces}<span class="dim"> · {t('detail.patches_replaces')}</span>{/if}

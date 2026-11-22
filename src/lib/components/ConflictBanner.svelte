@@ -25,7 +25,7 @@
   </div>
   {#if open}
     <ul>
-      {#each lines as c (c.key + c.entries[0].mod)}
+      {#each lines as c (c.id)}
         {@const e = c.entries[0]}
         <li>
           {#if c.entries.length > 1}

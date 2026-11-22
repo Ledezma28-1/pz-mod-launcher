@@ -10,6 +10,7 @@
   import Sidebar from './lib/components/Sidebar.svelte';
   import Disclaimer from './lib/components/Disclaimer.svelte';
   import ProfileHeader from './lib/components/ProfileHeader.svelte';
+  import ScreenError from './lib/components/ScreenError.svelte';
   import OrderTable from './lib/components/OrderTable.svelte';
   import OrderProposal from './lib/components/OrderProposal.svelte';
   import ConflictList from './lib/components/ConflictList.svelte';
@@ -31,7 +32,7 @@
   import ConflictBanner from './lib/components/ConflictBanner.svelte';
   import GameListBanner from './lib/components/GameListBanner.svelte';
   import SavesBanner from './lib/components/SavesBanner.svelte';
-  import { api, message } from './lib/api';
+  import { api, logUiError, message } from './lib/api';
 
   let gamePath = $state('');
 
@@ -136,10 +137,10 @@
   const STRETCH: Record<ViewProgress['stage'], [number, number]> = {
     mods: [0, 5],
     game: [5, 10],
-    files: [10, 55],
-    scripts: [55, 75],
-    lua: [75, 95],
-    conflicts: [95, 100],
+    files: [10, 45],
+    scripts: [45, 60],
+    lua: [60, 75],
+    conflicts: [75, 100],
   };
   function overall(p: ViewProgress): number {
     const [a, b] = STRETCH[p.stage];
@@ -156,6 +157,10 @@
       </div>
     {/each}
   </div>
+{/snippet}
+
+{#snippet failed(_: unknown, reset: () => void)}
+  <ScreenError {reset} />
 {/snippet}
 
 <svelte:window onkeydown={shortcuts} />
@@ -194,85 +199,89 @@
     <Sidebar />
 
     <main class="main">
-      {#if app.disclaimerOpen}
-        <Disclaimer />
-      {:else if app.screen === 'home'}
-        <Home />
-      {:else if app.screen === 'help'}
-        <Help />
-      {:else if app.screen === 'profile'}
-        {#if app.profiles.length === 0}
-          <EmptyState title={t('empty.profiles.title')} text={t('empty.profiles.text')}>
-            <button class="btn primary big" onclick={() => app.createProfile(t('empty.profiles.imported_name'), true)}>
-              {t('empty.profiles.import')}
-            </button>
-            <button class="btn big" onclick={() => app.createProfile(t('empty.profiles.name_empty'), false)}>
-              {t('empty.profiles.empty')}
-            </button>
-          </EmptyState>
-        {:else if app.errorView}
-          <EmptyState title={t('error.profile')} text={app.errorView} error>
-            <button class="btn" onclick={() => app.loadView()}>{t('error.profile.retry')}</button>
-          </EmptyState>
-        {:else if !app.view || app.loadingView}
-          <div class="loading" aria-busy="true">
-            <div class="reading" role="status" aria-live="polite">
-              <p>{t('profile.loading')}</p>
-              {#if app.viewProgress}
-                {@const p = app.viewProgress}
-                <div class="progress" role="progressbar" aria-label={t('profile.loading')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(overall(p))}>
-                  <span style:width="{overall(p)}%"></span>
-                </div>
-                <p class="step">{t(`profile.stage.${p.stage}`)}{#if p.total}{' · '}<span class="num">{t('profile.stage_count', { h: p.done, n: p.total })}</span>{/if}</p>
-              {/if}
+      <svelte:boundary onerror={logUiError} {failed}>
+        {#if app.disclaimerOpen}
+          <Disclaimer />
+        {:else if app.screen === 'home'}
+          <Home />
+        {:else if app.screen === 'help'}
+          <Help />
+        {:else if app.screen === 'profile'}
+          {#if app.profiles.length === 0}
+            <EmptyState title={t('empty.profiles.title')} text={t('empty.profiles.text')}>
+              <button class="btn primary big" onclick={() => app.createProfile(t('empty.profiles.imported_name'), true)}>
+                {t('empty.profiles.import')}
+              </button>
+              <button class="btn big" onclick={() => app.createProfile(t('empty.profiles.name_empty'), false)}>
+                {t('empty.profiles.empty')}
+              </button>
+            </EmptyState>
+          {:else if app.errorView}
+            <EmptyState title={t('error.profile')} text={app.errorView} error>
+              <button class="btn" onclick={() => app.loadView()}>{t('error.profile.retry')}</button>
+            </EmptyState>
+          {:else if !app.view || app.loadingView}
+            <div class="loading" aria-busy="true">
+              <div class="reading" role="status" aria-live="polite">
+                <p>{t('profile.loading')}</p>
+                {#if app.viewProgress}
+                  {@const p = app.viewProgress}
+                  <div class="progress" role="progressbar" aria-label={t('profile.loading')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(overall(p))}>
+                    <span style:width="{overall(p)}%"></span>
+                  </div>
+                  <p class="step">{t(`profile.stage.${p.stage}`)}{#if p.total}{' · '}<span class="num">{t(p.stage === 'conflicts' ? 'profile.stage_files' : 'profile.stage_count', { h: p.done, n: p.total })}</span>{/if}</p>
+                {/if}
+              </div>
+              {@render rowsSkeleton()}
             </div>
-            {@render rowsSkeleton()}
-          </div>
-        {:else}
-          <ProfileHeader />
-          {#if app.tab === 'order' && app.gameList && !(app.session && !app.session.finished)}<GameListBanner />{/if}
-          {#if app.tab === 'order' && app.saveGaps.length > 0 && !(app.session && !app.session.finished)}<SavesBanner />{/if}
-          {#if app.tab === 'order' && app.view.counts.blocks > 0}<ConflictBanner />{/if}
-          {#if app.tab === 'order'}
-            {#if app.view.rows.length === 0}
-              <EmptyState title={t('empty.profile.title')} text={t('empty.profile.text')}>
-                <button class="btn" onclick={() => (app.screen = 'library')}>{t('empty.profile.action')}</button>
-              </EmptyState>
-            {:else}
-              {#if app.proposal}<OrderProposal />{/if}
-              <OrderTable />
-            {/if}
-          {:else if app.tab === 'conflicts'}
-            <ConflictList />
-          {:else if app.tab === 'maps'}
-            {#key app.view.id}<MapsTab />{/key}
-          {:else if app.tab === 'export'}
-            <ProfileExport />
-          {:else if app.tab === 'sandbox'}
-            {#key app.view.id}<SandboxEditor />{/key}
-          {:else if app.tab === 'console'}
-            <Console />
           {:else}
-            {#key app.view.id}<ProfileSettings />{/key}
+            <ProfileHeader />
+            <svelte:boundary onerror={logUiError} {failed}>
+              {#if app.tab === 'order' && app.gameList && !(app.session && !app.session.finished)}<GameListBanner />{/if}
+              {#if app.tab === 'order' && app.saveGaps.length > 0 && !(app.session && !app.session.finished)}<SavesBanner />{/if}
+              {#if app.tab === 'order' && app.view.counts.blocks > 0}<ConflictBanner />{/if}
+              {#if app.tab === 'order'}
+                {#if app.view.rows.length === 0}
+                  <EmptyState title={t('empty.profile.title')} text={t('empty.profile.text')}>
+                    <button class="btn" onclick={() => (app.screen = 'library')}>{t('empty.profile.action')}</button>
+                  </EmptyState>
+                {:else}
+                  {#if app.proposal}<OrderProposal />{/if}
+                  <OrderTable />
+                {/if}
+              {:else if app.tab === 'conflicts'}
+                <ConflictList />
+              {:else if app.tab === 'maps'}
+                {#key app.view.id}<MapsTab />{/key}
+              {:else if app.tab === 'export'}
+                <ProfileExport />
+              {:else if app.tab === 'sandbox'}
+                {#key app.view.id}<SandboxEditor />{/key}
+              {:else if app.tab === 'console'}
+                <Console />
+              {:else}
+                {#key app.view.id}<ProfileSettings />{/key}
+              {/if}
+            </svelte:boundary>
+            {#if app.session?.finished && app.session.code !== 0 && app.session.recent_lines.length}
+              <details class="log" open>
+                <summary class="severity-blocks"><CircleX size={13} strokeWidth={2} class="inline-icon" />{t('session.end_error', { c: app.session.code ?? '?' })} · {t('session.log')}</summary>
+                <pre class="mono">{app.session.recent_lines.join('\n')}</pre>
+              </details>
+            {/if}
           {/if}
-          {#if app.session?.finished && app.session.code !== 0 && app.session.recent_lines.length}
-            <details class="log" open>
-              <summary class="severity-blocks"><CircleX size={13} strokeWidth={2} class="inline-icon" />{t('session.end_error', { c: app.session.code ?? '?' })} · {t('session.log')}</summary>
-              <pre class="mono">{app.session.recent_lines.join('\n')}</pre>
-            </details>
-          {/if}
+        {:else if app.screen === 'library'}
+          <Library />
+        {:else if app.screen === 'workshop'}
+          <Workshop />
+        {:else if app.screen === 'zb'}
+          <ZbView />
+        {:else if app.screen === 'install'}
+          <InstallView />
+        {:else}
+          <AppSettings />
         {/if}
-      {:else if app.screen === 'library'}
-        <Library />
-      {:else if app.screen === 'workshop'}
-        <Workshop />
-      {:else if app.screen === 'zb'}
-        <ZbView />
-      {:else if app.screen === 'install'}
-        <InstallView />
-      {:else}
-        <AppSettings />
-      {/if}
+      </svelte:boundary>
 
       {#if showConsolePanel}
         <div class="console-panel" style:height="{consoleHeight}px" bind:this={consolePanel}>
@@ -322,7 +331,9 @@
     </main>
 
     {#if withPanel}
-      <DetailPanel />
+      <svelte:boundary onerror={logUiError} {failed}>
+        <DetailPanel />
+      </svelte:boundary>
     {/if}
   {/if}
 </div>

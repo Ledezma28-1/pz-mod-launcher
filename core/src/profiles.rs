@@ -295,6 +295,17 @@ impl Profile {
         removed
     }
 
+    fn drop_repeated(&mut self) {
+        let mut out: Vec<ModEntry> = Vec::with_capacity(self.mods.len());
+        for m in std::mem::take(&mut self.mods) {
+            match out.iter_mut().find(|x| x.id == m.id) {
+                Some(x) => x.enabled |= m.enabled,
+                None => out.push(m),
+            }
+        }
+        self.mods = out;
+    }
+
     pub fn put_back(&mut self, removed: Vec<(usize, ModEntry)>) {
         for (slot, m) in removed {
             if self
@@ -501,6 +512,23 @@ pub struct ProfileStore {
     pub root: PathBuf,
 }
 
+pub fn entries_from(list: &ModList, key_of: impl Fn(&str) -> Option<String>) -> Vec<ModEntry> {
+    let mut out: Vec<ModEntry> = Vec::new();
+    for id in list.mods.iter().map(|m| normalize_id(m)) {
+        if out.iter().any(|m| m.id == id) {
+            continue;
+        }
+        out.push(ModEntry {
+            key: key_of(&id).unwrap_or_default(),
+            id,
+            enabled: true,
+            pinned: false,
+            section: None,
+        });
+    }
+    out
+}
+
 impl ProfileStore {
     pub fn at(root: &Path) -> ProfileStore {
         ProfileStore {
@@ -552,7 +580,11 @@ impl ProfileStore {
     pub fn load(&self, id: &str) -> CoreResult<Profile> {
         let path = self.folder(id).join(FILE);
         let t = fs::read_to_string(&path).map_err(Error::io(&path))?;
-        toml::from_str(&t).map_err(|e| Error::Backup(format!("{}: {e}", path.display())))
+        let mut p: Profile =
+            toml::from_str(&t).map_err(|e| Error::Backup(format!("{}: {e}", path.display())))?;
+        p.id = id.to_string();
+        p.drop_repeated();
+        Ok(p)
     }
 
     pub fn save(&self, p: &Profile) -> CoreResult<()> {

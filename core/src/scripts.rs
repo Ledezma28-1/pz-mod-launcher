@@ -236,6 +236,7 @@ pub fn template_refs(text: &str) -> Vec<String> {
         let Some(v) = r.strip_prefix('=') else {
             continue;
         };
+        let v = v.char_indices().nth(256).map_or(v, |(i, _)| &v[..i]);
         let v = v
             .split([',', '}'])
             .next()

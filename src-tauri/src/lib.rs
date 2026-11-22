@@ -516,21 +516,10 @@ async fn profile_create(app: AppHandle, name: String, do_import: bool) -> R<Prof
                 })
                 .ok_or("no se encuentra la carpeta del usuario")?;
             if let Ok(l) = pzmm_core::mod_list::ModList::read_file(&path) {
-                p.mods = l
-                    .mods
-                    .iter()
-                    .map(|mid| ModEntry {
-                        key: vis
-                            .iter()
-                            .find(|m| m.id() == Some(mid.as_str()))
-                            .map(|m| m.key.clone())
-                            .unwrap_or_default(),
-                        id: mid.clone(),
-                        enabled: true,
-                        pinned: false,
-                        section: None,
-                    })
-                    .collect();
+                p.mods = profiles::entries_from(&l, |id| {
+                    let found = vis.iter().find(|m| m.id() == Some(id));
+                    found.map(|m| m.key.clone())
+                });
                 p.maps = l.maps;
                 a.save(&p).map_err(err)?;
             }
@@ -1098,6 +1087,8 @@ fn view_of(app: &AppHandle, id: &str) -> R<ProfileView> {
             .filter(|x| x.enabled)
             .filter_map(|x| x.found)
             .collect();
+        let start = Instant::now();
+        logging::info(&format!("análisis de {id}: {} activos", enabled.len()));
         ScannedMod::index_all_with(&enabled, &counted("files"));
         let with_scripts: Vec<&ScannedMod> = enabled
             .iter()
@@ -1121,8 +1112,9 @@ fn view_of(app: &AppHandle, id: &str) -> R<ProfileView> {
         ScannedMod::lua_all_with(&with_lua, &counted("lua"));
         tell("conflicts", 0, 0);
         let ctx = context(&j, &p, &media);
-        let findings = conflicts::analyze(&resolved, &vis, &ctx);
+        let findings = conflicts::analyze_with(&resolved, &vis, &ctx, &counted("conflicts"));
         let v = ProfileView::of(&p, &resolved, findings);
+        logging::info(&format!("análisis de {id}: hecho en {:?}", start.elapsed()));
         let signature = signature_count(&p, &vis);
         e.counts
             .lock()
@@ -2835,6 +2827,11 @@ fn workshop_of_key(key: &str) -> Option<u64> {
 }
 
 #[tauri::command(async)]
+fn log_ui_error(text: String) {
+    logging::error(&format!("interfaz: {text}"));
+}
+
+#[tauri::command(async)]
 fn profile_share(id: String) -> R<String> {
     let p = store()?.load(&id).map_err(err)?;
     let c = SharedProfile {
@@ -3015,7 +3012,11 @@ async fn profile_count(app: AppHandle, id: String) -> R<Count> {
         let resolved = conflicts::profile_entries(&p, &vis);
         let media = game_media(&e)?;
         let ctx = context(&j, &p, &media);
+        let start = Instant::now();
+        let active = resolved.iter().filter(|x| x.enabled).count();
+        logging::info(&format!("recuento de {id}: {active} activos"));
         let r = Count::of(&p, &conflicts::analyze(&resolved, &vis, &ctx));
+        logging::info(&format!("recuento de {id}: hecho en {:?}", start.elapsed()));
         e.counts
             .lock()
             .map_err(err)?
@@ -3429,6 +3430,46 @@ fn webview_visible(app: &AppHandle, visible: bool) {
 #[cfg(not(windows))]
 fn webview_visible(_app: &AppHandle, _visible: bool) {}
 
+#[cfg(windows)]
+fn watch_webview(app: &AppHandle) {
+    use std::sync::atomic::{AtomicU32, Ordering};
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        COREWEBVIEW2_PROCESS_FAILED_KIND, COREWEBVIEW2_PROCESS_FAILED_KIND_RENDER_PROCESS_EXITED,
+    };
+    static RELOADS: AtomicU32 = AtomicU32::new(0);
+    let Some(w) = app.get_webview_window("main") else {
+        return;
+    };
+    let _ = w.with_webview(|pw| {
+        let handler = webview2_com::ProcessFailedEventHandler::create(Box::new(|core, args| {
+            let mut kind = COREWEBVIEW2_PROCESS_FAILED_KIND::default();
+            if let Some(a) = args {
+                // SAFETY: the event's own arguments, read inside its callback.
+                unsafe { a.ProcessFailedKind(&mut kind)? };
+            }
+            logging::error(&format!("WebView2: falló un proceso (tipo {})", kind.0));
+            if kind == COREWEBVIEW2_PROCESS_FAILED_KIND_RENDER_PROCESS_EXITED
+                && RELOADS.fetch_add(1, Ordering::Relaxed) < 3
+                && let Some(c) = core
+            {
+                // SAFETY: the view that raised the event, used from its own thread.
+                unsafe { c.Reload()? };
+            }
+            Ok(())
+        }));
+        // SAFETY: the controller Tauri provides for this view, used from its own thread.
+        unsafe {
+            if let Ok(core) = pw.controller().CoreWebView2() {
+                let mut token = 0;
+                let _ = core.add_ProcessFailed(&handler, &mut token);
+            }
+        }
+    });
+}
+
+#[cfg(not(windows))]
+fn watch_webview(_app: &AppHandle) {}
+
 pub fn run() {
     logging::watch_panics();
     logging::info(concat!(
@@ -3473,6 +3514,7 @@ pub fn run() {
         .setup(|app| {
             watch_mods(app.handle().clone());
             watch_steam(app.handle().clone());
+            watch_webview(app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -3488,6 +3530,7 @@ pub fn run() {
             rescan,
             profiles,
             profiles_unreadable,
+            log_ui_error,
             profile_create,
             profile_rename,
             profile_delete,

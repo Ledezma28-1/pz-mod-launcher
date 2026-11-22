@@ -762,22 +762,21 @@ fn lua_runs<'a>(mods: &[&'a ScannedMod], ctx: &Context<'a>) -> ByName<'a> {
             })
             .collect()
     };
-    let mut done: std::collections::HashSet<&str> = std::collections::HashSet::new();
+    let mut entered: std::collections::HashSet<&str> = std::collections::HashSet::new();
     let mut sequence: Vec<(&'a str, Option<usize>)> = Vec::with_capacity(order.len());
     for &(rel, first) in &order {
         let mut stack: Vec<(&'a str, Option<usize>, bool)> = vec![(rel, first, false)];
         while let Some((r, f, expanded)) = stack.pop() {
-            if done.contains(r) {
+            if expanded {
+                sequence.push((r, f));
                 continue;
             }
-            if expanded {
-                done.insert(r);
-                sequence.push((r, f));
+            if !entered.insert(r) {
                 continue;
             }
             stack.push((r, f, true));
             for q in requires_of(r).into_iter().rev() {
-                if !done.contains(q) {
+                if !entered.contains(q) {
                     stack.push((q, by_path.get(q).copied().flatten(), false));
                 }
             }
@@ -1436,6 +1435,15 @@ fn loads_alone(
 }
 
 pub fn analyze(entries: &[ProfileEntry], visible: &[ScannedMod], ctx: &Context) -> Vec<Finding> {
+    analyze_with(entries, visible, ctx, &|_, _| {})
+}
+
+pub fn analyze_with(
+    entries: &[ProfileEntry],
+    visible: &[ScannedMod],
+    ctx: &Context,
+    progress: &(dyn Fn(usize, usize) + Sync),
+) -> Vec<Finding> {
     let mut out = Vec::new();
     let active: Vec<&ProfileEntry> = entries.iter().filter(|e| e.enabled).collect();
     let enabled_ids: BTreeSet<String> = active.iter().map(|e| normalize_id(&e.id)).collect();
@@ -1929,12 +1937,40 @@ pub fn analyze(entries: &[ProfileEntry], visible: &[ScannedMod], ctx: &Context) 
         lost: Vec<String>,
         behavior: usize,
     }
+    let game_has = |rel: &str| ctx.game_files.is_some_and(|g| g.contains(rel));
+    let to_compare: Vec<(&str, &[usize])> = owners
+        .iter()
+        .filter(|(rel, ds)| {
+            (ds.len() > 1 && read(rel) == Load::Reads)
+                || (ctx.game_folder.is_some() && game_has(rel))
+        })
+        .map(|(rel, ds)| (*rel, ds.as_slice()))
+        .collect();
+    crate::mods::in_threads(
+        &to_compare,
+        |&(rel, ds)| {
+            let Some((&wins, before)) = ds.split_last() else {
+                return;
+            };
+            if let Some(g) = ctx.game_folder
+                && game_has(rel)
+            {
+                same_as_game(loaded[wins].1, rel, g);
+            }
+            if read(rel) == Load::Reads {
+                for &p in before {
+                    same_file(loaded[p].1, loaded[wins].1, rel);
+                }
+            }
+        },
+        progress,
+    );
     let mut by_pair: BTreeMap<(usize, usize), Count> = BTreeMap::new();
     let mut of_game: BTreeMap<usize, Vec<String>> = BTreeMap::new();
     let mut shares: BTreeSet<(usize, usize)> = BTreeSet::new();
     for (rel, ds) in &owners {
         if let Some(&last) = ds.last()
-            && ctx.game_files.is_some_and(|a| a.contains(*rel))
+            && game_has(rel)
         {
             let same = ctx
                 .game_folder

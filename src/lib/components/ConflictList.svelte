@@ -180,7 +180,7 @@
         </h3>
         <ul>
           {#if g === 'load'}
-            {#each clusterByReason(hs) as c (c.key + c.severity + c.entries[0].mod)}
+            {#each clusterByReason(hs) as c (c.id)}
               {#if c.entries.length > 1}{@render cluster(c, !one)}{:else}{@render entry(c.entries[0], !one)}{/if}
             {/each}
           {:else}

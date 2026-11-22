@@ -1,4 +1,5 @@
 
+import { errorNotes } from './ui-errors';
 import type {
   Layout,
   SaveGap,
@@ -167,6 +168,13 @@ export const api = {
   workshopIdle: (seconds: number) => call<void>('workshop_idle', { seconds }),
   openFolder: (path: string) => call<void>('open_folder', { path }),
 };
+
+const note = errorNotes();
+
+export function logUiError(e: unknown) {
+  const text = note(e);
+  if (text) call<void>('log_ui_error', { text }).catch(() => {});
+}
 
 export async function onSession(f: (e: SessionState) => void): Promise<() => void> {
   if (!inTauri) return () => {};
