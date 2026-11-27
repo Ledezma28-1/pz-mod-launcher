@@ -6,6 +6,8 @@ Gestor de mods para Project Zomboid (Build 42) en Windows. Cada perfil tiene su 
 
 La interfaz está en español y en inglés.
 
+![Ordenar la carga: cada movimiento dice por qué](screenshots/sort.gif)
+
 ## Descarga
 
 Descarga el instalador desde [Releases](https://github.com/Ledezma28-1/pz-mod-launcher/releases/latest). La app también tiene [página en el Workshop de Steam](https://steamcommunity.com/sharedfiles/filedetails/?id=3840658470); suscribirse no añade nada al juego.
@@ -22,10 +24,10 @@ gh attestation verify PZ.Mod.Manager_0.5.0_x64-setup.exe --repo Ledezma28-1/pz-m
 
 | | |
 |---|---|
-| ![Ordenar la carga: cada movimiento dice por qué](screenshots/sort.gif) | ![Desactivar un mod que no cargará quita su conflicto](screenshots/conflicts.gif) |
-| Ordenar la carga. Cada movimiento dice por qué. | Arreglar un conflicto desde la lista. |
-| ![Añadir mods instalados a un perfil desde la Biblioteca](screenshots/library.gif) | ![Errores de la consola del juego agrupados por mod](screenshots/console.gif) |
-| Añadir mods instalados a un perfil. | Leer los errores del juego, agrupados por mod. |
+| ![Desactivar un mod que no cargará quita su conflicto](screenshots/conflicts.gif) | ![Añadir mods instalados a un perfil desde la Biblioteca](screenshots/library.gif) |
+| Arreglar un conflicto desde la lista. | Añadir mods instalados a un perfil. |
+| ![Errores de la consola del juego agrupados por mod](screenshots/console.gif) | |
+| Leer los errores del juego, agrupados por mod. | |
 
 ## Capturas
 

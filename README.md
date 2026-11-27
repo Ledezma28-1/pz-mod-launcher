@@ -6,6 +6,8 @@ A mod manager for Project Zomboid (Build 42) on Windows. Each profile has its ow
 
 The interface is available in English and Spanish.
 
+![Sorting the load order: each move says why](screenshots/sort.gif)
+
 ## Download
 
 Get the installer from [Releases](https://github.com/Ledezma28-1/pz-mod-launcher/releases/latest). The app also has a [Steam Workshop page](https://steamcommunity.com/sharedfiles/filedetails/?id=3840658470); subscribing to it adds nothing to the game.
@@ -22,10 +24,10 @@ gh attestation verify PZ.Mod.Manager_0.5.0_x64-setup.exe --repo Ledezma28-1/pz-m
 
 | | |
 |---|---|
-| ![Sorting the load order: each move says why](screenshots/sort.gif) | ![Disabling a mod that won't load clears its conflict](screenshots/conflicts.gif) |
-| Sort the load order. Each move says why. | Fix a conflict from the list. |
-| ![Adding installed mods to a profile from the Library](screenshots/library.gif) | ![Game console errors grouped by mod](screenshots/console.gif) |
-| Add installed mods to a profile. | Read the game's errors, grouped by mod. |
+| ![Disabling a mod that won't load clears its conflict](screenshots/conflicts.gif) | ![Adding installed mods to a profile from the Library](screenshots/library.gif) |
+| Fix a conflict from the list. | Add installed mods to a profile. |
+| ![Game console errors grouped by mod](screenshots/console.gif) | |
+| Read the game's errors, grouped by mod. | |
 
 ## Screenshots
 
