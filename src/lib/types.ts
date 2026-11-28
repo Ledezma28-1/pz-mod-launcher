@@ -622,5 +622,6 @@ export interface MapsView {
   world: [number, number, number, number];
   vanilla: PyramidInfo | null;
   server_line: string[];
+  base_excluded: boolean;
   saved_order: boolean;
 }

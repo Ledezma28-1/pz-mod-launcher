@@ -501,11 +501,16 @@ pub fn order_maps(saved: &[String], detected: &[String]) -> Vec<String> {
 }
 
 pub fn server_maps(order: &[String], excluded: &[String]) -> Vec<String> {
-    order
+    let out: Vec<String> = order
         .iter()
-        .filter(|m| *m == BASE_MAP || !excluded.contains(m))
+        .filter(|m| !excluded.contains(m))
         .cloned()
-        .collect()
+        .collect();
+    if out.is_empty() {
+        vec![BASE_MAP.to_string()]
+    } else {
+        out
+    }
 }
 
 pub struct ProfileStore {

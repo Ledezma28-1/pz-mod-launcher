@@ -139,6 +139,7 @@
   function current() {
     const order = data?.saved_order ? folders() : [];
     const out = [...new Set(active.filter((m) => !m.server).map((m) => m.folder))];
+    if (data?.base_excluded) out.push(BASE);
     return { order, out };
   }
 
@@ -174,6 +175,15 @@
     const { order, out } = current();
     const next = m.server ? [...out, m.folder] : out.filter((f) => f !== m.folder);
     void save(order, next, t(m.server ? 'maps.server_out' : 'maps.server_in', { m: m.title }));
+  }
+
+  const baseIn = $derived((data?.server_line ?? []).includes(BASE));
+  const baseAlone = $derived((data?.server_line ?? []).every((f) => f === BASE));
+
+  function toggleBase() {
+    const { order, out } = current();
+    const next = baseIn ? [...out, BASE] : out.filter((f) => f !== BASE);
+    void save(order, next, t(baseIn ? 'maps.server_out' : 'maps.server_in', { m: BASE }));
   }
 
   async function enable(maps: MapInfo[]) {
@@ -319,7 +329,7 @@
               {/each}
               {#if !filter}
                 <div class="row base" role="row">
-                  <span class="c-check" role="cell"><input type="checkbox" checked disabled aria-label={`${t('maps.server')}: ${BASE}`} /></span>
+                  <span class="c-check" role="cell"><input type="checkbox" checked={baseIn} disabled={busy || (baseIn && baseAlone)} title={t(baseIn && baseAlone ? 'maps.base_server_alone' : 'maps.base_server_hint')} aria-label={`${t('maps.server')}: ${BASE}`} onchange={toggleBase} /></span>
                   <span class="c-name name" role="cell"><span class="title">{BASE}</span><span class="meta">{t('maps.base')}</span></span>
                   <span class="c-end fixed" role="cell" title={t('export.base_map_fixed')}><Lock size={13} strokeWidth={1.75} /></span>
                 </div>

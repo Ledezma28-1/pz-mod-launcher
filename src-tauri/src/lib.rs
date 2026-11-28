@@ -1171,7 +1171,7 @@ fn profile_maps(id: String, maps: Vec<String>, server_excluded: Vec<String>) -> 
         p.maps = m;
         p.server_excluded_maps = server_excluded
             .into_iter()
-            .filter(|x| profiles::is_valid_map(x) && x != profiles::BASE_MAP)
+            .filter(|x| profiles::is_valid_map(x))
             .collect();
         Ok(())
     })
@@ -2939,7 +2939,7 @@ async fn profile_import(app: AppHandle, text: String) -> R<Imported> {
         p.server_excluded_maps = c
             .server_excluded_maps
             .into_iter()
-            .filter(|m| profiles::is_valid_map(m) && m != profiles::BASE_MAP)
+            .filter(|m| profiles::is_valid_map(m))
             .collect();
         let (launch, ignored) = c.launch.from_foreign();
         p.launch = launch;

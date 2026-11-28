@@ -531,6 +531,8 @@ function sbReal() {
 let viewsOpened = 0;
 let savesFixed = false;
 
+let demoMapsOut: Set<string> | null = null;
+
 function demoMaps() {
   const box = (x0: number, y0: number, x1: number, y1: number): [number, number][] => {
     const out: [number, number][] = [];
@@ -567,6 +569,9 @@ function demoMaps() {
     map('cp6', 'Checkpoint 6', 'SecretZ', box(47, 9, 48, 10), false, null),
     map('bunker', 'Bunker', 'BunkerMod', box(54, 22, 55, 22), false, null, { compatible: false }),
   ];
+  if (demoMapsOut) for (const m of maps) m.server = m.active && !demoMapsOut.has(m.folder);
+  const baseOut = demoMapsOut?.has('Muldraugh, KY') ?? false;
+  const line = maps.filter((m) => m.active && m.server).map((m) => m.folder);
   const cells: Record<string, unknown>[] = [];
   const seen = new Map<string, string[]>();
   for (const m of maps.filter((x) => x.active)) for (const [x, y] of m.cells) seen.set(`${x},${y}`, [...(seen.get(`${x},${y}`) ?? []), m.key]);
@@ -598,7 +603,8 @@ function demoMaps() {
     bounds: [0, 0, 77, 69],
     world: [0, 0, 77, 62],
     vanilla: null,
-    server_line: [...maps.filter((m) => m.active && m.server).map((m) => m.folder), 'Muldraugh, KY'],
+    server_line: baseOut && line.length > 0 ? line : [...line, 'Muldraugh, KY'],
+    base_excluded: baseOut,
     saved_order: true,
   };
 }
@@ -775,6 +781,9 @@ export async function demo<T>(cmd: string, args: Record<string, unknown>): Promi
       return r(library);
     case 'profile_maps_view':
       return r(demoMaps());
+    case 'profile_maps':
+      demoMapsOut = new Set(args.serverExcluded as string[]);
+      return r(undefined);
     case 'profile_export': {
       const v = view();
       return r({

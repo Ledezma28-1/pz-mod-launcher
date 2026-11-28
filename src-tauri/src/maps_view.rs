@@ -54,6 +54,7 @@ pub struct MapsView {
     pub world: [i32; 4],
     pub vanilla: Option<PyramidDto>,
     pub server_line: Vec<String>,
+    pub base_excluded: bool,
     pub saved_order: bool,
 }
 
@@ -275,6 +276,10 @@ pub fn build(
         world,
         vanilla: pyramid_dto(&vanilla, vanilla_key),
         server_line,
+        base_excluded: p
+            .server_excluded_maps
+            .iter()
+            .any(|m| m == profiles::BASE_MAP),
         saved_order: p.maps.iter().any(|m| m != profiles::BASE_MAP),
     }
 }
